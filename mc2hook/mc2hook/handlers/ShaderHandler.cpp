@@ -11,6 +11,7 @@ typedef HRESULT(WINAPI* SetVertexShader_t)(IDirect3DDevice9*, IDirect3DVertexSha
 typedef HRESULT(WINAPI* SetPixelShader_t)(IDirect3DDevice9*, IDirect3DPixelShader9*);
 typedef HRESULT(WINAPI* SetVSConstF_t)(IDirect3DDevice9*, UINT, const float*, DWORD);
 typedef HRESULT(WINAPI* SetRenderState_t)(IDirect3DDevice9*, D3DRENDERSTATETYPE, DWORD);
+typedef HRESULT(WINAPI* SetTransform_t)(IDirect3DDevice9*, D3DTRANSFORMSTATETYPE, const D3DMATRIX*);
 
 static CreateVertexShader_t  OrgCreateVertexShader        = nullptr;
 static CreatePixelShader_t   OrgCreatePixelShader         = nullptr;
@@ -18,79 +19,58 @@ static SetVertexShader_t     OrgSetVertexShader           = nullptr;
 static SetPixelShader_t      OrgSetPixelShader            = nullptr;
 static SetVSConstF_t         OrgSetVertexShaderConstantF  = nullptr;
 static SetRenderState_t      OrgSetRenderState            = nullptr;
+static SetTransform_t        OrgSetTransform              = nullptr;
 
-// ps_3_0 disables fixed-function fog, so each upgraded PS lerps fog manually.
-// We capture D3DRS_FOGCOLOR here and push it to the active PS's fog register.
-// g_ActiveFogReg = the register the currently-bound upgraded PS reads fog from
-// (PS_648B38=c2; -1 = none, incl. vanilla chrome which uses FFP fog). Lets a mid-pass
-// FOGCOLOR change reach the cached active PS even when the PS cache suppresses a re-bind.
+// ps_3_0 has no fixed-function fog, so the body PS lerps fog manually from c2. We capture
+// D3DRS_FOGCOLOR and push it to the active upgraded PS; g_ActiveFogReg is that PS's fog register
+// (c2 for the body PS, -1 for none). Keeps fog current when the PS cache suppresses a re-bind.
 static float g_FogColor[4]  = { 0.5f, 0.5f, 0.5f, 1.0f };
 static int   g_ActiveFogReg = -1;
 
-// Cache of VS c0-c3 (LightColor0/1/2 + Ambient). Written by Hook_SetVertexShaderConstantF
-// as the engine uploads them; read by Hook_SetPixelShader to push to PS c4-c7.
-// Avoids GetVertexShaderConstantF which forces a GPU pipeline flush.
-static float g_CachedVSConst[16] = {};  // 4 × float4
+// Scene ambient (VS c3), cached as the engine uploads it and pushed to the body PS's c4.
+// Avoids GetVertexShaderConstantF, which forces a GPU pipeline flush.
+static float g_CachedAmbient[4] = {};
 
-// ── Per-material Specular → PS c3 (route #2: scoped per-submesh callback shim) ─────────────────
-// The engine forwards ONLY material Diffuse to a constant (c11). To get per-submesh Specular to
-// the body PS WITHOUT a global engine patch, we shim the per-draw callback slot dword_85B34C
-// (0x85B34C). In mode-3 the engine sets it to sub_5E9CA0 (per-material: c16 + sampler-0 bind) and
-// invokes it per submesh — for EVERY submesh, textured or not — as cdecl(this[2]=D3DMATERIAL9*,
-// this[0], this[1]) @ 0x5FB4BE. Our shim reads the live material's Specular (+0x20) → c3,
-// then tail-calls the original.
-// Scoped: the slot is ours only during the mode-3 body pass (the engine re-points it per pass via
-// sub_5E9F80 / clears it via sub_5E9AA0), so rims/glass/road/FFP are untouched.
+// Per-submesh material Specular → PS c3. The engine only forwards material Diffuse to a constant, so
+// we shim its per-draw callback slot (0x85B34C): read the live material's Specular (+0x20) into c3,
+// then tail-call the original. Scoped to the body pass; the engine re-points/clears the slot elsewhere.
 typedef void(__cdecl* PerMaterialCb_t)(void* material, void* baseTex, void* mask);
-static PerMaterialCb_t g_OrgPerMaterialCb = nullptr;   // captured engine callback (sub_5E9CA0 in mode-3)
+static PerMaterialCb_t g_OrgPerMaterialCb = nullptr;
 
-// PS_648B38's dynamic light loop reads WORLD-space light dirs (c8..c10)
-// and colors (c5..c7) as constants, with the count in i0. The hook supplies all three:
-//   • colors : forwarded from cached VS c0-c2 at PS bind (g_CachedVSConst).
-//   • dirs   : computed here as normRow (c20-c22, inverse-world) × object-space light
-//              dirs (c12-c14) = world-space dirs — the exact transform the old VS did
-//              per-vertex — pushed to c8 when the engine sets the per-draw normal rows
-//              (while the body PS is active). See UploadWorldSpaceLights().
-//   • count  : SetPixelShaderConstantI(0, …) at PS bind (in-game directional cap = 2).
-static float g_CachedLightDirW[12] = {};   // c12,c13,c14  OBJECT-space light dirs (negated)
-static float g_CachedNormRow[12]   = {};   // c20,c21,c22  inverse-world normal rows (→ world)
-static bool  g_BodyPSActive        = false;
-static int   g_DirLightCount       = 2;    // i0; loaded from config in Install()
+static bool g_BodyPSActive = false;   // true while the body PS is bound (gates per-draw light upload)
+
+// Light path: the engine's own directional set is tiny (2-3) and churns, so we drive the PS
+// ourselves. The gather detour harvests the K nearest light nodes (world pos + colour + range) into
+// g_DynLights; UploadLights turns each into a view-space dir + attenuated colour and pushes K to the
+// PS. K = MaxDynamicLights (1..KMAX); more lights = fewer selection pops. KMAX must equal MAX_LIGHTS.
+#define KMAX 16
+struct DynLight { float pos[3]; float rgb[3]; float range; float d2; };
+static DynLight g_DynLights[KMAX]    = {};
+static int      g_DynCount           = 0;
+static float    g_LightQueryPos[3]   = {};   // gather query = car position (cached in the detour)
+static int      g_MaxDynLights       = 6;    // [Shader] MaxDynamicLights; K nearest lights (1..16)
+static float    g_LightFalloff       = 1.0f; // [Shader] LightFalloff; scales light attenuation
+
+// World→view matrix, captured from the FFP D3DTS_VIEW set each scene. The shader's own matrices only
+// reach view space, so we use this to bring the world-space light dirs into view (WorldDirToView).
+static float g_ViewMatrix[16]  = { 1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1 };
 
 // ── Shader bytecode ──────────────────────────────────────────────────────────
-// Creation-time bytecode swaps — zero runtime overhead per frame.
-//
-// Upgrades — BODY pair only:
-//   0x6486F8  FresnelHeadlights VS  vs_1_1 → vs_3_0  geometry/material + world incident (lighting → PS)
-//   0x648B38  projectedmaskcar PS   ps_1_1 → ps_3_0  IBL (world-anchored) + real rep-i0 light loop +
-//                                                     Cook-Torrance direct specular + manual fog (c2)
-//
-// CHROME pair (0x675DF0 / 0x676088, System A CubeMap Fresnel) — swap infra kept, bytecode
-// STUBBED ({0}) so HasBytecode()==false → the hook skips it → chrome renders VANILLA. It only
-// draws the menu/garage preview (in-game bodies use the System B mode-3 pair above), and sharing
-// the in-game [Shader] params (EnvironmentScale=15) blew the garage chrome out. Reverting it to
-// stock fixes the preview with zero in-game impact. Re-enable by un-stubbing the arrays + adding
-// the two shaders back to config.json. Road PSes (648A10/AA0/BB8) are also vanilla.
-//
-// Modified VS/PS pair:
-//   0x6486F8 (VS_6486F8) ↔ 0x648B38 (PS_648B38) — headlight receiver (sub_512BB0 mode 3)
+// Compiled bytecode, swapped in at shader-creation time (zero per-frame overhead). Only the body
+// pair is upgraded to SM3.0; the chrome pair is stubbed ({0}) so HasBytecode() is false and the hook
+// leaves chrome vanilla (it draws only the menu/garage preview). Re-enable chrome by un-stubbing the
+// arrays and re-adding the shaders to config.json.
+//   0x6486F8  FresnelHeadlights VS  vs_1_1 → vs_3_0  geometry/material; N + incident to the PS (view-space)
+//   0x648B38  projectedmaskcar PS   ps_1_1 → ps_3_0  view-space lighting loop + Cook-Torrance + IBL + fog
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ── CubeMapFresnel VS — vs_2_0 (chrome; DORMANT, bytecode stubbed below) ─────
-// Constants: c0-c3=lightColors/ambient, c4-c7=MVP, c10=ambientFloor, c11=material,
-//            c12-c14=object lightDirs, c15=fog, c16=FresnelParams, c17-c19=WorldView, c20-c22=inverse-world
-// Outputs: oPos, oFog, oD0(diffuse), oD1.w(Fresnel), oT0(baseUV), oT1(reflVec), oT2(N)
-static const DWORD VS_675DF0[] = { 0 };  // STUBBED: chrome reverted to vanilla — HasBytecode()==false so no swap (removed from config.json so compile.ps1 will not refill)
+// Chrome VS/PS (vanilla; bytecode stubbed → not swapped).
+static const DWORD VS_675DF0[] = { 0 };
+static const DWORD PS_676088[] = { 0 };
 
-// ── CubeMapFresnel PS — ps_2_a (chrome; FFP fog) ─────────────────────────────
-static const DWORD PS_676088[] = { 0 };  // STUBBED: chrome reverted to vanilla — HasBytecode()==false so no swap (removed from config.json so compile.ps1 will not refill)
-
-// ── FresnelHeadlights VS — vs_3_0 (geometry/material; lighting moved to PS) ──
-// Constants: c4=MVP, c11=material, c15=fog, c16=shaderConst, c17-c19=WorldView,
-//            c20-c22=inverse-world (normals), c23-c30=headlight projectors. No light loop.
-// Outputs: oPos, COLOR1=Specular(material.rgb,shineMax), TEXCOORD0=baseUV,
-//            TEXCOORD2/3=projA/B, TEXCOORD4=ViewNorm(world normal),
-//            TEXCOORD5=IncidentDir(view .xyz, fog .w), TEXCOORD1=WorldInc(world incident).
+// FresnelHeadlights VS (vs_3_0). Constants: c4=MVP, c11=material, c15=fog, c16=shaderConst,
+// c17-c19=WorldView, c20-c22=normal matrix (→view), c23-c30=headlight projectors.
+// Outputs: Specular(material.rgb, shineMax), baseUV, projA/B, ViewNorm (view-space), IncidentDir (view .xyz, fog .w).
 static const DWORD VS_6486F8[] = {
     0xFFFE0300, 0x009EFFFE, 0x42415443, 0x0000001C,
     0x0000024C, 0xFFFE0300, 0x00000010, 0x0000001C,
@@ -139,55 +119,47 @@ static const DWORD VS_6486F8[] = {
     0x80000005, 0xE0030002, 0x0200001F, 0x80020005,
     0xE00F0003, 0x0200001F, 0x80030005, 0xE00F0004,
     0x0200001F, 0x80040005, 0xE0070005, 0x0200001F,
-    0x80050005, 0xE00F0006, 0x0200001F, 0x80010005,
-    0xE0070007, 0x03000009, 0xE0010000, 0xA0E40004,
-    0x90E40000, 0x03000009, 0xE0020000, 0xA0E40005,
-    0x90E40000, 0x03000009, 0xE0040000, 0xA0E40006,
-    0x90E40000, 0x03000009, 0xE0080000, 0xA0E40007,
-    0x90E40000, 0x03000009, 0x80040000, 0x90E40000,
-    0xA0E40013, 0x04000004, 0xE0080006, 0x80AA0000,
-    0xA055000F, 0xA000000F, 0x03000008, 0x80010001,
-    0x90E40001, 0xA0E40014, 0x03000008, 0x80020001,
-    0x90E40001, 0xA0E40015, 0x03000008, 0x80040001,
-    0x90E40001, 0xA0E40016, 0x03000008, 0x80080001,
-    0x80E40001, 0x80E40001, 0x02000007, 0x80080001,
-    0x80FF0001, 0x03000005, 0xE0070005, 0x80FF0001,
-    0x80E40001, 0x03000009, 0x80010000, 0x90E40000,
-    0xA0E40011, 0x03000009, 0x80020000, 0x90E40000,
-    0xA0E40012, 0x02000024, 0x80070001, 0x80E40000,
-    0x03000005, 0x80070002, 0x80550001, 0xA0E40012,
-    0x04000004, 0x80070002, 0xA0E40011, 0x80000001,
-    0x80E40002, 0x04000004, 0x80070002, 0xA0E40013,
-    0x80AA0001, 0x80E40002, 0x02000001, 0xE0070006,
-    0x80E40001, 0x03000008, 0xE0010007, 0x80E40002,
-    0xA0E40014, 0x03000008, 0xE0020007, 0x80E40002,
-    0xA0E40015, 0x03000008, 0xE0040007, 0x80E40002,
-    0xA0E40016, 0x02000001, 0x80080000, 0xA0000010,
-    0x03000009, 0xE0010003, 0x80E40000, 0xA0E40017,
-    0x03000009, 0xE0020003, 0x80E40000, 0xA0E40018,
-    0x03000009, 0xE0080003, 0x80E40000, 0xA0E4001A,
-    0x03000009, 0xE0010004, 0x80E40000, 0xA0E4001B,
-    0x03000009, 0xE0020004, 0x80E40000, 0xA0E4001C,
-    0x03000009, 0xE0080004, 0x80E40000, 0xA0E4001E,
-    0x02000001, 0xE0070001, 0xA0E4000B, 0x02000001,
-    0xE0080001, 0xA0AA0010, 0x02000001, 0xE0030002,
-    0x90E40002, 0x02000001, 0xE0040003, 0xA0000010,
-    0x02000001, 0xE0040004, 0xA0000010, 0x0000FFFF,
+    0x80050005, 0xE00F0006, 0x03000009, 0xE0010000,
+    0xA0E40004, 0x90E40000, 0x03000009, 0xE0020000,
+    0xA0E40005, 0x90E40000, 0x03000009, 0xE0040000,
+    0xA0E40006, 0x90E40000, 0x03000009, 0xE0080000,
+    0xA0E40007, 0x90E40000, 0x03000009, 0x80040000,
+    0x90E40000, 0xA0E40013, 0x04000004, 0xE0080006,
+    0x80AA0000, 0xA055000F, 0xA000000F, 0x03000008,
+    0xE0010005, 0x90E40001, 0xA0E40014, 0x03000008,
+    0xE0020005, 0x90E40001, 0xA0E40015, 0x03000008,
+    0xE0040005, 0x90E40001, 0xA0E40016, 0x03000009,
+    0x80010000, 0x90E40000, 0xA0E40011, 0x03000009,
+    0x80020000, 0x90E40000, 0xA0E40012, 0x03000008,
+    0x80010001, 0x80E40000, 0x80E40000, 0x02000007,
+    0x80010001, 0x80000001, 0x03000005, 0xE0070006,
+    0x80E40000, 0x80000001, 0x02000001, 0x80080000,
+    0xA0000010, 0x03000009, 0xE0010003, 0x80E40000,
+    0xA0E40017, 0x03000009, 0xE0020003, 0x80E40000,
+    0xA0E40018, 0x03000009, 0xE0080003, 0x80E40000,
+    0xA0E4001A, 0x03000009, 0xE0010004, 0x80E40000,
+    0xA0E4001B, 0x03000009, 0xE0020004, 0x80E40000,
+    0xA0E4001C, 0x03000009, 0xE0080004, 0x80E40000,
+    0xA0E4001E, 0x02000001, 0xE0070001, 0xA0E4000B,
+    0x02000001, 0xE0080001, 0xA0AA0010, 0x02000001,
+    0xE0030002, 0x90E40002, 0x02000001, 0xE0040003,
+    0xA0000010, 0x02000001, 0xE0040004, 0xA0000010,
+    0x0000FFFF,
 };
 
 
-// ── projectedmaskcar PS — ps_3_0 (IBL, real rep-i0 light loop, manual fog c2) ──
-// Genuine dynamic loop: count in i0 (SetPixelShaderConstantI), dirs c8-c10, colors c5-c7.
+// ── projectedmaskcar PS — ps_3_0 (IBL, rep-i0 light loop, manual fog c2) ──
+// Dynamic loop: count in i0 (SetPixelShaderConstantI), view-space dirs c33.., colors c17.., ambient c4.
 static const DWORD PS_648B38[] = {
     0xFFFF0300, 0x0092FFFE, 0x42415443, 0x0000001C,
     0x0000021B, 0xFFFF0300, 0x0000000C, 0x0000001C,
     0x00000108, 0x00000214, 0x0000010C, 0x00040002,
     0x00120001, 0x00000118, 0x00000000, 0x00000128,
     0x00020002, 0x000A0001, 0x00000118, 0x00000000,
-    0x00000133, 0x00050002, 0x00160003, 0x00000140,
+    0x00000133, 0x00110002, 0x00460010, 0x00000140,
     0x00000000, 0x00000150, 0x00000001, 0x00000001,
-    0x00000160, 0x00000000, 0x00000170, 0x00080002,
-    0x00220003, 0x00000180, 0x00000000, 0x00000190,
+    0x00000160, 0x00000000, 0x00000170, 0x00210002,
+    0x00860010, 0x00000180, 0x00000000, 0x00000190,
     0x00030002, 0x000E0001, 0x00000118, 0x00000000,
     0x0000019E, 0x00000002, 0x00020001, 0x00000118,
     0x00000000, 0x000001A8, 0x00010002, 0x00060001,
@@ -200,11 +172,11 @@ static const DWORD PS_648B38[] = {
     0xABAB0074, 0x00030001, 0x00040001, 0x00000001,
     0x00000000, 0x6F465F67, 0x6C6F4367, 0x6700726F,
     0x67694C5F, 0x6F437468, 0x00726F6C, 0x00030001,
-    0x00040001, 0x00000003, 0x00000000, 0x694C5F67,
+    0x00040001, 0x00000010, 0x00000000, 0x694C5F67,
     0x43746867, 0x746E756F, 0xABABAB00, 0x00020000,
     0x00010001, 0x00000001, 0x00000000, 0x694C5F67,
     0x44746867, 0x53567269, 0xABABAB00, 0x00030001,
-    0x00040001, 0x00000003, 0x00000000, 0x614D5F67,
+    0x00040001, 0x00000010, 0x00000000, 0x614D5F67,
     0x65705374, 0x616C7563, 0x5F670072, 0x61726150,
     0x0030736D, 0x61505F67, 0x736D6172, 0x5F730031,
     0x65736142, 0xABABAB00, 0x000C0004, 0x00010001,
@@ -216,145 +188,181 @@ static const DWORD PS_648B38[] = {
     0x335F7370, 0x4D00305F, 0x6F726369, 0x74666F73,
     0x29522820, 0x534C4820, 0x6853204C, 0x72656461,
     0x6D6F4320, 0x656C6970, 0x30312072, 0xAB00312E,
-    0x05000051, 0xA00F000B, 0xBF266666, 0x3F800000,
-    0xBF800000, 0x00000000, 0x05000051, 0xA00F000C,
-    0x42800000, 0xC1147AE1, 0xBF851EB8, 0x3F851EB8,
-    0x05000051, 0xA00F000D, 0x40490FDB, 0xB727C5AC,
-    0x47C35000, 0x3F000000, 0x05000051, 0xA00F000E,
-    0x80000000, 0xBF800000, 0xC0000000, 0x3F800000,
-    0x05000051, 0xA00F000F, 0xBF800000, 0xBCE147AE,
-    0xBF126E98, 0x3CB43958, 0x05000051, 0xA00F0010,
-    0x3F800000, 0x3D2E147B, 0x3F851EB8, 0xBD23D70A,
+    0x05000051, 0xA00F0005, 0xBF266666, 0x3F800000,
+    0xBF800000, 0x00000000, 0x05000051, 0xA00F0006,
+    0x80000000, 0xBF800000, 0xC0000000, 0xC0400000,
+    0x05000051, 0xA00F0007, 0xC0800000, 0xC0A00000,
+    0xC0C00000, 0xC0E00000, 0x05000051, 0xA00F0008,
+    0xC1000000, 0xC1100000, 0xC1200000, 0xC1300000,
+    0x05000051, 0xA00F0009, 0xC1400000, 0xC1500000,
+    0xC1600000, 0xC1700000, 0x05000051, 0xA00F000A,
+    0x3F000000, 0x42800000, 0xC1147AE1, 0x00000000,
+    0x05000051, 0xA00F000B, 0xC1800000, 0x40490FDB,
+    0xB727C5AC, 0x47C35000, 0x05000051, 0xA00F000C,
+    0xBF800000, 0xBCE147AE, 0xBF126E98, 0x3CB43958,
+    0x05000051, 0xA00F000D, 0x3F800000, 0x3D2E147B,
+    0x3F851EB8, 0xBD23D70A, 0x05000051, 0xA00F000E,
+    0xBF851EB8, 0x3F851EB8, 0x00000000, 0x00000000,
     0x0200001F, 0x8001000A, 0x900F0000, 0x0200001F,
     0x80000005, 0x90030001, 0x0200001F, 0x80020005,
     0x900F0002, 0x0200001F, 0x80030005, 0x900F0003,
     0x0200001F, 0x80040005, 0x90070004, 0x0200001F,
-    0x80050005, 0x90080005, 0x0200001F, 0x80010005,
-    0x90070006, 0x0200001F, 0x90000000, 0xA00F0800,
-    0x0200001F, 0x98000000, 0xA00F0801, 0x0200001F,
-    0x90000000, 0xA00F0802, 0x0200001F, 0x90000000,
-    0xA00F0803, 0x03000042, 0x800F0000, 0x90E40001,
-    0xA0E40800, 0x03010042, 0x800F0001, 0x90E40002,
-    0xA0E40802, 0x03010042, 0x800F0002, 0x90E40003,
-    0xA0E40803, 0x02000024, 0x80070003, 0x90E40004,
-    0x03000008, 0x80080002, 0x91E40006, 0x91E40006,
-    0x02000007, 0x80080002, 0x80FF0002, 0x03000005,
-    0x80070004, 0x80FF0002, 0x91E40006, 0x02000024,
-    0x80070005, 0x90E40006, 0x03000008, 0x80080003,
-    0x80E40005, 0x80E40003, 0x03000002, 0x80080003,
-    0x80FF0003, 0x80FF0003, 0x04000004, 0x80070005,
-    0x80E40003, 0x81FF0003, 0x80E40005, 0x03000008,
-    0x80180003, 0x80E40003, 0x80E40004, 0x03000005,
-    0x80070006, 0x80E40000, 0x90E40000, 0x02000001,
-    0x80180004, 0x90FF0000, 0x04000004, 0x80080004,
-    0x80FF0004, 0xA000000B, 0xA055000B, 0x03000005,
-    0x80080006, 0x80FF0004, 0x80FF0004, 0x03000005,
-    0x80010007, 0x80FF0006, 0x80FF0006, 0x03000002,
-    0x80020007, 0x81FF0004, 0xA055000B, 0x0300000B,
-    0x80010008, 0x80550007, 0xA0000000, 0x03000002,
-    0x80020007, 0x81FF0003, 0xA055000B, 0x03000005,
-    0x80040007, 0x80550007, 0x80550007, 0x03000005,
-    0x80040007, 0x80AA0007, 0x80AA0007, 0x03000005,
-    0x80020007, 0x80AA0007, 0x80550007, 0x04000012,
-    0x80010009, 0x80550007, 0x80000008, 0xA0000000,
-    0x03000002, 0x80020007, 0x81000009, 0xA055000B,
-    0x04000004, 0x80040007, 0x80FF0006, 0x80FF0006,
-    0xA0AA000B, 0x02000001, 0x800A0008, 0xA0E4000B,
-    0x03000005, 0x80080007, 0x80FF0003, 0x80FF0003,
-    0x04000004, 0x80080006, 0x80FF0006, 0x81FF0006,
-    0xA055000B, 0x04000004, 0x80080007, 0x80FF0007,
-    0x80FF0006, 0x80000007, 0x02000007, 0x80080007,
-    0x80FF0007, 0x02000006, 0x80080007, 0x80FF0007,
-    0x02000001, 0x80070009, 0xA0FF000B, 0x02000001,
-    0x8007000A, 0xA0FF000B, 0x02000001, 0x8001000B,
-    0xA0FF000B, 0x01000026, 0xF0E40000, 0x03000002,
-    0x800F000B, 0x8000000B, 0xA093000E, 0x04000058,
-    0x8007000C, 0x8C55000B, 0xA0E40008, 0x80FF0008,
-    0x04000058, 0x8007000C, 0x8CAA000B, 0xA0E40009,
-    0x80E4000C, 0x04000058, 0x8007000C, 0x8CFF000B,
-    0xA0E4000A, 0x80E4000C, 0x03000008, 0x80010008,
-    0x80E40003, 0x80E4000C, 0x0300000B, 0x80080009,
-    0x80000008, 0xA0FF000B, 0x04000058, 0x8007000D,
-    0x8C55000B, 0xA0E40005, 0x80FF0008, 0x04000058,
-    0x8007000D, 0x8CAA000B, 0xA0E40006, 0x80E4000D,
-    0x04000058, 0x800E000B, 0x8CFF000B, 0xA0900007,
-    0x8090000D, 0x04000004, 0x80070009, 0x80FF0009,
-    0x80F9000B, 0x80E40009, 0x04000004, 0x8007000C,
-    0x91E40006, 0x80FF0002, 0x80E4000C, 0x02000024,
-    0x8007000D, 0x80E4000C, 0x03000008, 0x80010008,
-    0x80E40003, 0x80E4000D, 0x0300000B, 0x8008000A,
-    0x80000008, 0xA0FF000B, 0x03000008, 0x80010008,
-    0x80E40004, 0x80E4000D, 0x03000005, 0x80040008,
-    0x80FF000A, 0x80FF000A, 0x04000004, 0x80040008,
-    0x80AA0008, 0x80AA0007, 0xA055000B, 0x03000005,
-    0x80040008, 0x80AA0008, 0x80AA0008, 0x03000005,
-    0x80040008, 0x80AA0008, 0xA000000D, 0x02000006,
-    0x80040008, 0x80AA0008, 0x03000005, 0x80040008,
-    0x80000007, 0x80AA0008, 0x03000002, 0x8008000A,
-    0x81000008, 0xA055000B, 0x04000058, 0x80010008,
-    0x80000008, 0x80FF000A, 0xA055000B, 0x03000005,
-    0x8008000A, 0x80000008, 0x80000008, 0x03000005,
-    0x8008000A, 0x80FF000A, 0x80FF000A, 0x03000005,
-    0x80010008, 0x80000008, 0x80FF000A, 0x04000012,
-    0x8008000A, 0x80000008, 0x80550008, 0xA0000000,
-    0x03000005, 0x80010008, 0x80FF0009, 0x80FF0009,
-    0x04000004, 0x80010008, 0x80000008, 0x80FF0006,
-    0x80000007, 0x02000007, 0x80010008, 0x80000008,
-    0x02000006, 0x80010008, 0x80000008, 0x03000005,
-    0x80010008, 0x80FF0003, 0x80000008, 0x04000004,
-    0x80010008, 0x80FF0009, 0x80FF0007, 0x80000008,
-    0x03000002, 0x8001000C, 0x80000008, 0xA055000D,
-    0x02000006, 0x80010008, 0x80000008, 0x04000058,
-    0x80010008, 0x8000000C, 0x80000008, 0xA0AA000D,
-    0x03000005, 0x80010008, 0x80000008, 0x80AA0008,
-    0x03000005, 0x80010008, 0x80000008, 0xA0FF000D,
-    0x0300000A, 0x8001000C, 0x80000008, 0xA000000C,
-    0x03000005, 0x80010008, 0x80FF000A, 0x8000000C,
-    0x03000005, 0x800E000B, 0x80E4000B, 0x80000008,
-    0x04000004, 0x800E000B, 0x80E4000B, 0x80FF0009,
-    0x8090000A, 0x04000058, 0x8007000A, 0x81FF0009,
-    0x80E4000A, 0x80F9000B, 0x00000027, 0x03000002,
-    0x80070003, 0x80E40009, 0xA0E40004, 0x03000005,
-    0x80070003, 0x80E40006, 0x80E40003, 0x02000001,
-    0x80040004, 0xA0AA0000, 0x03000005, 0x80070004,
-    0x80AA0004, 0xA0E40003, 0x03000005, 0x80070004,
-    0x80E40004, 0x80E4000A, 0x03000005, 0x80080005,
-    0x80FF0004, 0xA0550001, 0x0300005F, 0x800F0005,
-    0x80E40005, 0xA0E40801, 0x02000001, 0x800F0006,
-    0xA0E4000F, 0x04000004, 0x800F0006, 0x80FF0004,
-    0x80E40006, 0xA0E40010, 0x03000005, 0x80080002,
-    0x80000006, 0x80000006, 0x03000005, 0x80080003,
-    0x80FF0003, 0xA055000C, 0x0200000E, 0x80080003,
-    0x80FF0003, 0x0300000A, 0x80080004, 0x80FF0003,
-    0x80FF0002, 0x04000004, 0x80080002, 0x80FF0004,
-    0x80000006, 0x80550006, 0x04000004, 0x80030006,
-    0x80FF0002, 0xA0EE000C, 0x80EE0006, 0x04000004,
-    0x80080002, 0xA0000000, 0x80000006, 0x80550006,
-    0x03000005, 0x80070005, 0x80FF0002, 0x80E40005,
-    0x03000005, 0x80070005, 0x80E40005, 0xA0550000,
-    0x04000004, 0x80070003, 0x80550007, 0x80E40003,
-    0x80E40005, 0x04000004, 0x80070001, 0x80E40002,
-    0x80FF0001, 0x80E40001, 0x03000005, 0x80070001,
-    0x80E40001, 0x80E40003, 0x04000004, 0x80070001,
-    0x80E40001, 0xA0FF0000, 0x81E40003, 0x04000004,
-    0x80070001, 0xA0000001, 0x80E40001, 0x80E40003,
-    0x04000004, 0x80070000, 0x80E40004, 0x80E40000,
-    0x80E40001, 0x02000001, 0x80110001, 0x90FF0005,
-    0x03000002, 0x80070000, 0x80E40000, 0xA1E40002,
-    0x04000004, 0x80170800, 0x80000001, 0x80E40000,
-    0xA0E40002, 0x02000001, 0x80080800, 0x80FF0000,
-    0x0000FFFF,
+    0x80050005, 0x900F0005, 0x0200001F, 0x90000000,
+    0xA00F0800, 0x0200001F, 0x98000000, 0xA00F0801,
+    0x0200001F, 0x90000000, 0xA00F0802, 0x0200001F,
+    0x90000000, 0xA00F0803, 0x03000042, 0x800F0000,
+    0x90E40001, 0xA0E40800, 0x03010042, 0x800F0001,
+    0x90E40002, 0xA0E40802, 0x03010042, 0x800F0002,
+    0x90E40003, 0xA0E40803, 0x02000024, 0x80070003,
+    0x90E40004, 0x03000008, 0x80080002, 0x91E40005,
+    0x91E40005, 0x02000007, 0x80080002, 0x80FF0002,
+    0x03000005, 0x80070004, 0x80FF0002, 0x91E40005,
+    0x02000024, 0x80070005, 0x90E40005, 0x03000008,
+    0x80080003, 0x80E40005, 0x80E40003, 0x03000002,
+    0x80080003, 0x80FF0003, 0x80FF0003, 0x04000004,
+    0x80070005, 0x80E40003, 0x81FF0003, 0x80E40005,
+    0x03000008, 0x80180003, 0x80E40003, 0x80E40004,
+    0x03000005, 0x80070006, 0x80E40000, 0x90E40000,
+    0x02000001, 0x80180004, 0x90FF0000, 0x04000004,
+    0x80080004, 0x80FF0004, 0xA0000005, 0xA0550005,
+    0x03000005, 0x80080006, 0x80FF0004, 0x80FF0004,
+    0x03000005, 0x80010007, 0x80FF0006, 0x80FF0006,
+    0x03000002, 0x80020007, 0x81FF0004, 0xA0550005,
+    0x0300000B, 0x80010008, 0x80550007, 0xA0000000,
+    0x03000002, 0x80020007, 0x81FF0003, 0xA0550005,
+    0x03000005, 0x80040007, 0x80550007, 0x80550007,
+    0x03000005, 0x80040007, 0x80AA0007, 0x80AA0007,
+    0x03000005, 0x80020007, 0x80AA0007, 0x80550007,
+    0x04000012, 0x80010009, 0x80550007, 0x80000008,
+    0xA0000000, 0x03000002, 0x80020007, 0x81000009,
+    0xA0550005, 0x04000004, 0x80040007, 0x80FF0006,
+    0x80FF0006, 0xA0AA0005, 0x02000001, 0x800A0008,
+    0xA0E40005, 0x03000005, 0x80080007, 0x80FF0003,
+    0x80FF0003, 0x04000004, 0x80080006, 0x80FF0006,
+    0x81FF0006, 0xA0550005, 0x04000004, 0x80080007,
+    0x80FF0007, 0x80FF0006, 0x80000007, 0x02000007,
+    0x80080007, 0x80FF0007, 0x02000006, 0x80080007,
+    0x80FF0007, 0x02000001, 0x80070009, 0xA0FF0005,
+    0x02000001, 0x8007000A, 0xA0FF0005, 0x02000001,
+    0x80010008, 0xA0FF0005, 0x01000026, 0xF0E40000,
+    0x02000001, 0x80040008, 0xA100000B, 0x0203002D,
+    0x80000008, 0x80AA0008, 0x03000002, 0x800F000B,
+    0x80000008, 0xA0E40006, 0x03000002, 0x800F000C,
+    0x80000008, 0xA0E40007, 0x03000002, 0x800F000D,
+    0x80000008, 0xA0E40008, 0x03000002, 0x800F000E,
+    0x80000008, 0xA0E40009, 0x04000058, 0x8007000F,
+    0x8C00000B, 0xA0E40021, 0x80FF0008, 0x04000058,
+    0x8007000F, 0x8C55000B, 0xA0E40022, 0x80E4000F,
+    0x04000058, 0x8007000F, 0x8CAA000B, 0xA0E40023,
+    0x80E4000F, 0x04000058, 0x8007000F, 0x8CFF000B,
+    0xA0E40024, 0x80E4000F, 0x04000058, 0x8007000F,
+    0x8C00000C, 0xA0E40025, 0x80E4000F, 0x04000058,
+    0x8007000F, 0x8C55000C, 0xA0E40026, 0x80E4000F,
+    0x04000058, 0x8007000F, 0x8CAA000C, 0xA0E40027,
+    0x80E4000F, 0x04000058, 0x8007000F, 0x8CFF000C,
+    0xA0E40028, 0x80E4000F, 0x04000058, 0x8007000F,
+    0x8C00000D, 0xA0E40029, 0x80E4000F, 0x04000058,
+    0x8007000F, 0x8C55000D, 0xA0E4002A, 0x80E4000F,
+    0x04000058, 0x8007000F, 0x8CAA000D, 0xA0E4002B,
+    0x80E4000F, 0x04000058, 0x8007000F, 0x8CFF000D,
+    0xA0E4002C, 0x80E4000F, 0x04000058, 0x8007000F,
+    0x8C00000E, 0xA0E4002D, 0x80E4000F, 0x04000058,
+    0x8007000F, 0x8C55000E, 0xA0E4002E, 0x80E4000F,
+    0x04000058, 0x8007000F, 0x8CAA000E, 0xA0E4002F,
+    0x80E4000F, 0x04000058, 0x8007000F, 0x8CFF000E,
+    0xA0E40030, 0x80E4000F, 0x03000008, 0x80040008,
+    0x80E40003, 0x80E4000F, 0x0300000B, 0x80080009,
+    0x80AA0008, 0xA0FF0005, 0x04000058, 0x80070010,
+    0x8C00000B, 0xA0E40011, 0x80FF0008, 0x04000058,
+    0x80070010, 0x8C55000B, 0xA0E40012, 0x80E40010,
+    0x04000058, 0x8007000B, 0x8CAA000B, 0xA0E40013,
+    0x80E40010, 0x04000058, 0x8007000B, 0x8CFF000B,
+    0xA0E40014, 0x80E4000B, 0x04000058, 0x8007000B,
+    0x8C00000C, 0xA0E40015, 0x80E4000B, 0x04000058,
+    0x8007000B, 0x8C55000C, 0xA0E40016, 0x80E4000B,
+    0x04000058, 0x8007000B, 0x8CAA000C, 0xA0E40017,
+    0x80E4000B, 0x04000058, 0x8007000B, 0x8CFF000C,
+    0xA0E40018, 0x80E4000B, 0x04000058, 0x8007000B,
+    0x8C00000D, 0xA0E40019, 0x80E4000B, 0x04000058,
+    0x8007000B, 0x8C55000D, 0xA0E4001A, 0x80E4000B,
+    0x04000058, 0x8007000B, 0x8CAA000D, 0xA0E4001B,
+    0x80E4000B, 0x04000058, 0x8007000B, 0x8CFF000D,
+    0xA0E4001C, 0x80E4000B, 0x04000058, 0x8007000B,
+    0x8C00000E, 0xA0E4001D, 0x80E4000B, 0x04000058,
+    0x8007000B, 0x8C55000E, 0xA0E4001E, 0x80E4000B,
+    0x04000058, 0x8007000B, 0x8CAA000E, 0xA0E4001F,
+    0x80E4000B, 0x04000058, 0x8007000B, 0x8CFF000E,
+    0xA0E40020, 0x80E4000B, 0x04000004, 0x80070009,
+    0x80FF0009, 0x80E4000B, 0x80E40009, 0x04000004,
+    0x8007000C, 0x91E40005, 0x80FF0002, 0x80E4000F,
+    0x02000024, 0x8007000D, 0x80E4000C, 0x03000008,
+    0x80040008, 0x80E40003, 0x80E4000D, 0x0300000B,
+    0x8008000A, 0x80AA0008, 0xA0FF0005, 0x03000008,
+    0x80040008, 0x80E40004, 0x80E4000D, 0x03000005,
+    0x8008000A, 0x80FF000A, 0x80FF000A, 0x04000004,
+    0x8008000A, 0x80FF000A, 0x80AA0007, 0xA0550005,
+    0x03000005, 0x8008000A, 0x80FF000A, 0x80FF000A,
+    0x03000005, 0x8008000A, 0x80FF000A, 0xA055000B,
+    0x02000006, 0x8008000A, 0x80FF000A, 0x03000005,
+    0x8008000A, 0x80000007, 0x80FF000A, 0x03000002,
+    0x8008000B, 0x81AA0008, 0xA0550005, 0x04000058,
+    0x80040008, 0x80AA0008, 0x80FF000B, 0xA0550005,
+    0x03000005, 0x8008000B, 0x80AA0008, 0x80AA0008,
+    0x03000005, 0x8008000B, 0x80FF000B, 0x80FF000B,
+    0x03000005, 0x80040008, 0x80AA0008, 0x80FF000B,
+    0x04000012, 0x8008000B, 0x80AA0008, 0x80550008,
+    0xA0000000, 0x03000005, 0x80040008, 0x80FF0009,
+    0x80FF0009, 0x04000004, 0x80040008, 0x80AA0008,
+    0x80FF0006, 0x80000007, 0x02000007, 0x80040008,
+    0x80AA0008, 0x02000006, 0x80040008, 0x80AA0008,
+    0x03000005, 0x80040008, 0x80FF0003, 0x80AA0008,
+    0x04000004, 0x80040008, 0x80FF0009, 0x80FF0007,
+    0x80AA0008, 0x03000002, 0x8001000C, 0x80AA0008,
+    0xA0AA000B, 0x02000006, 0x80040008, 0x80AA0008,
+    0x04000058, 0x80040008, 0x8000000C, 0x80AA0008,
+    0xA0FF000B, 0x03000005, 0x80040008, 0x80AA0008,
+    0x80FF000A, 0x03000005, 0x80040008, 0x80AA0008,
+    0xA000000A, 0x0300000A, 0x8008000A, 0x80AA0008,
+    0xA055000A, 0x03000005, 0x80040008, 0x80FF000B,
+    0x80FF000A, 0x03000005, 0x8007000B, 0x80E4000B,
+    0x80AA0008, 0x04000004, 0x8007000B, 0x80E4000B,
+    0x80FF0009, 0x80E4000A, 0x04000058, 0x8007000A,
+    0x81FF0009, 0x80E4000A, 0x80E4000B, 0x03000002,
+    0x80010008, 0x80000008, 0xA0550005, 0x00000027,
+    0x03000002, 0x80070003, 0x80E40009, 0xA0E40004,
+    0x03000005, 0x80070003, 0x80E40006, 0x80E40003,
+    0x02000001, 0x80040004, 0xA0AA0000, 0x03000005,
+    0x80070004, 0x80AA0004, 0xA0E40003, 0x03000005,
+    0x80070004, 0x80E40004, 0x80E4000A, 0x03000005,
+    0x80080005, 0x80FF0004, 0xA0550001, 0x0300005F,
+    0x800F0005, 0x80E40005, 0xA0E40801, 0x02000001,
+    0x800F0006, 0xA0E4000C, 0x04000004, 0x800F0006,
+    0x80FF0004, 0x80E40006, 0xA0E4000D, 0x03000005,
+    0x80080002, 0x80000006, 0x80000006, 0x03000005,
+    0x80080003, 0x80FF0003, 0xA0AA000A, 0x0200000E,
+    0x80080003, 0x80FF0003, 0x0300000A, 0x80080004,
+    0x80FF0003, 0x80FF0002, 0x04000004, 0x80080002,
+    0x80FF0004, 0x80000006, 0x80550006, 0x04000004,
+    0x80030006, 0x80FF0002, 0xA0E4000E, 0x80EE0006,
+    0x04000004, 0x80080002, 0xA0000000, 0x80000006,
+    0x80550006, 0x03000005, 0x80070005, 0x80FF0002,
+    0x80E40005, 0x03000005, 0x80070005, 0x80E40005,
+    0xA0550000, 0x04000004, 0x80070003, 0x80550007,
+    0x80E40003, 0x80E40005, 0x04000004, 0x80070001,
+    0x80E40002, 0x80FF0001, 0x80E40001, 0x03000005,
+    0x80070001, 0x80E40001, 0x80E40003, 0x04000004,
+    0x80070001, 0x80E40001, 0xA0FF0000, 0x81E40003,
+    0x04000004, 0x80070001, 0xA0000001, 0x80E40001,
+    0x80E40003, 0x04000004, 0x80070000, 0x80E40004,
+    0x80E40000, 0x80E40001, 0x02000001, 0x80110001,
+    0x90FF0005, 0x03000002, 0x80070000, 0x80E40000,
+    0xA1E40002, 0x04000004, 0x80170800, 0x80000001,
+    0x80E40000, 0xA0E40002, 0x02000001, 0x80080800,
+    0x80FF0000, 0x0000FFFF,
 };
 
-// ── Runtime shader constants ─────────────────────────────────────────────────
-// The s1 env cube is the "envmap" (gfxCubemap); the s2 mask is "fx_headlight_mask"
-// (projectedmaskcar pass). Exposed mc2hook.ini [Shader] keys: ShaderEnable, Reflectance,
-// EnvmapStrength, SpecularIntensity, HeadlightMaskScale, HeadlightMaskOnBody.
-// PS_648B38: c0 = Reflectance(F0) | EnvmapStrength | SpecularIntensity | HeadlightMaskScale
-//            c1 = HeadlightMaskOnBody | MAX_MIP | (unused)
-//            c3 = per-material Specular (dword_85B34C shim, D3DMATERIAL9 +0x20)
-//            c4 = Ambient (VS c3)   c5-c7 = LightColor0-2 (VS c0-c2)   c8-c10 = world dirs
-// PS_676088: c0 = FresnelScale | EnvironmentScale (DORMANT — chrome is vanilla/stubbed)
+// Body PS constants. c0/c1 = tunables (below); c3 = per-material Specular; c4 = ambient;
+// c17.. = light colours; c33.. = view-space light dirs; i0 = light count.
 static float g_PS648B38[8] = {
  /* c0.x Reflectance (F0)       */ 0.04f,   // dielectric clearcoat F0; per-material Specular (c3) modulates
  /* c0.y EnvmapStrength         */ 6.00f,   // envmap (s1 env cube) reflection strength
@@ -371,38 +379,58 @@ static float g_PS676088[8] = { 1.00f, 15.00f, 0.00f, 0.00f, 0.00f, 0.00f, 0.00f,
 static IDirect3DPixelShader9*  sPS_648B38_handle = nullptr;
 static IDirect3DPixelShader9*  sPS_676088_handle = nullptr;
 
-// ── Light constants — raw pass-through (no smoothing) ────────────────────────
-// Light constants (c0-c2 colors, c12-c14 dirs, c3 ambient) are uploaded raw (see
-// Hook_SetVertexShaderConstantF); only the c0-c3 PS-forwarding cache is maintained.
-// An earlier EMA smoothing of these was dropped: layered on the engine's churning
-// nearest-N light selection, it made specular highlights wander.
-// ─────────────────────────────────────────────────────────────────────────────
-
 // Returns false if the bytecode pointer is null or its first DWORD is zero (stub/unset).
 static bool HasBytecode(const DWORD* p) { return p && *p; }
 
-// Compute the directional light dirs the PS loop reads (c8..c10). c20-c22 are the
-// INVERSE-WORLD normal rows and c12-c14 the OBJECT-space light dirs, so
-// normRow · objectLightDir yields a WORLD-space light dir — matching the PS's N
-// (also normRow·objectNormal = world). So both N and L live in world space; NdotL is
-// consistent.
-static void UploadWorldSpaceLights(IDirect3DDevice9* pDevice)
+// Rotate a world-space direction into view space with the captured view matrix (D3D row-vector
+// convention: out = w · M, dotting the columns). Identity until the matrix is captured → passthrough.
+static void WorldDirToView(const float* w, float* out)
 {
-    float worldL[12];
-    for (int li = 0; li < 3; ++li)
+    const float* m = g_ViewMatrix;   // row-major: m[row*4+col]
+    out[0] = w[0]*m[0] + w[1]*m[4] + w[2]*m[8];
+    out[1] = w[0]*m[1] + w[1]*m[5] + w[2]*m[9];
+    out[2] = w[0]*m[2] + w[1]*m[6] + w[2]*m[10];
+}
+
+static void UploadLights(IDirect3DDevice9* pDevice)
+{
+    pDevice->SetPixelShaderConstantF(4, g_CachedAmbient, 1);   // c4 = scene ambient (VS c3)
+
+    // K nearest harvested light nodes → per-light dir (world→view bridged) + attenuated colour.
+    int K = g_DynCount;
+    if (K > g_MaxDynLights) K = g_MaxDynLights;
+    if (K > KMAX)           K = KMAX;
+
+    float cols[4 * KMAX] = {};
+    float dirs[4 * KMAX] = {};
+    for (int i = 0; i < K; ++i)
     {
-        const float* oL = g_CachedLightDirW + li * 4;   // object-space light dir (c12-c14)
-        float x = g_CachedNormRow[0] * oL[0] + g_CachedNormRow[1] * oL[1] + g_CachedNormRow[2]  * oL[2];
-        float y = g_CachedNormRow[4] * oL[0] + g_CachedNormRow[5] * oL[1] + g_CachedNormRow[6]  * oL[2];
-        float z = g_CachedNormRow[8] * oL[0] + g_CachedNormRow[9] * oL[1] + g_CachedNormRow[10] * oL[2];
-        float len = sqrtf(x * x + y * y + z * z);
+        const DynLight& dl = g_DynLights[i];
+        float dx = dl.pos[0] - g_LightQueryPos[0];
+        float dy = dl.pos[1] - g_LightQueryPos[1];
+        float dz = dl.pos[2] - g_LightQueryPos[2];                  // car → light (toward-light = L), WORLD
+        float len = sqrtf(dx * dx + dy * dy + dz * dz);
         float inv = (len > 1e-6f) ? 1.0f / len : 0.0f;
-        worldL[li * 4 + 0] = x * inv;
-        worldL[li * 4 + 1] = y * inv;
-        worldL[li * 4 + 2] = z * inv;
-        worldL[li * 4 + 3] = 0.0f;
+        float wL[3] = { dx * inv, dy * inv, dz * inv };
+        WorldDirToView(wL, dirs + i * 4);                           // WORLD → VIEW (match view-space N)
+
+        // Smooth range falloff: saturate(1 - d²/range²)², scaled by LightFalloff.
+        float r2 = dl.range * dl.range;
+        float a  = (r2 > 1e-6f) ? (1.0f - dl.d2 / r2) : 0.0f;
+        if (a < 0.0f) a = 0.0f;
+        a = a * a * g_LightFalloff;
+        cols[i * 4 + 0] = dl.rgb[0] * a;
+        cols[i * 4 + 1] = dl.rgb[1] * a;
+        cols[i * 4 + 2] = dl.rgb[2] * a;
     }
-    pDevice->SetPixelShaderConstantF(8, worldL, 3);   // c8,c9,c10  world-space light dirs
+
+    if (K > 0)
+    {
+        pDevice->SetPixelShaderConstantF(17, cols, K);             // c17.. colors  (c17-c32, up to 16)
+        pDevice->SetPixelShaderConstantF(33, dirs, K);             // c33.. dirs    (c33-c48, up to 16)
+    }
+    const int i0[4] = { K, 0, 0, 0 };
+    pDevice->SetPixelShaderConstantI(0, i0, 1);                    // i0 = live light count
 }
 
 static HRESULT WINAPI Hook_CreateVertexShader(IDirect3DDevice9* pDevice, const DWORD* pFunction, IDirect3DVertexShader9** ppShader)
@@ -429,15 +457,7 @@ static HRESULT WINAPI Hook_CreateVertexShader(IDirect3DDevice9* pDevice, const D
         hr = OrgCreateVertexShader(pDevice, pFunction, ppShader);
     }
 
-    if (SUCCEEDED(hr) && ppShader && *ppShader)
-    {
-        char buf[32];
-        if (!label) { _snprintf_s(buf, sizeof(buf), "VS@0x%08X", (unsigned)(uintptr_t)pFunction); label = buf; }
-        hook_output("[Shader] VS %s: %s", finalBytecode != pFunction ? "Upgraded" : "Created", label);
-        // VS_6486F8 handle not needed — no per-bind VS constants (geometry/material only)
-    }
-
-    return hr;
+    return hr;   // VS handle not needed — no per-bind VS constants (geometry/material only)
 }
 
 static HRESULT WINAPI Hook_CreatePixelShader(IDirect3DDevice9* pDevice, const DWORD* pFunction, IDirect3DPixelShader9** ppShader)
@@ -466,15 +486,10 @@ static HRESULT WINAPI Hook_CreatePixelShader(IDirect3DDevice9* pDevice, const DW
 
     if (SUCCEEDED(hr) && ppShader && *ppShader)
     {
-        char buf[32];
-        if (!label) { _snprintf_s(buf, sizeof(buf), "PS@0x%08X", (unsigned)(uintptr_t)pFunction); label = buf; }
-        hook_output("[Shader] PS %s: %s", finalBytecode != pFunction ? "Upgraded" : "Created", label);
         if (finalBytecode == PS_648B38) sPS_648B38_handle = *ppShader;
-        // Record the chrome handle ONLY when we actually swapped it (mirrors the body line
-        // above; was keyed on pFunction, which recorded the VANILLA chrome PS while stubbed
-        // and let Hook_SetPixelShader push g_PS676088 into a shader we no longer own). With
-        // the bytecode stubbed, finalBytecode never == PS_676088 → handle stays null → the
-        // dormant chrome branch below never fires. Un-stub the array to re-enable the path.
+        // Record the chrome handle ONLY when we actually swapped it (keyed on finalBytecode, not
+        // pFunction — while the chrome bytecode is stubbed, finalBytecode never == PS_676088, so the
+        // handle stays null and the dormant chrome branch never fires). Un-stub the array to re-enable.
         if (finalBytecode == PS_676088) sPS_676088_handle = *ppShader;
     }
 
@@ -486,71 +501,46 @@ static HRESULT WINAPI Hook_SetVertexShader(IDirect3DDevice9* pDevice, IDirect3DV
     return OrgSetVertexShader(pDevice, pShader);
 }
 
-// Per-material callback shim — see the route-#2 note above the typedef. Forwards the live submesh
-// material's Specular to PS c3, then runs the engine's original per-material callback (c16 + s0).
+// Per-material callback shim: push the submesh material's Specular to PS c3, then run the engine's
+// original callback.
 static void __cdecl Hook_PerMaterialCb(void* material, void* baseTex, void* mask)
 {
     if (g_BodyPSActive && material)
     {
         IDirect3DDevice9* dev = DevicePtr.get();
         if (dev)
-            dev->SetPixelShaderConstantF(3, (const float*)((const char*)material + 0x20), 1);  // D3DMATERIAL9.Specular → c3
+            dev->SetPixelShaderConstantF(3, (const float*)((const char*)material + 0x20), 1);  // Specular (+0x20) → c3
     }
     if (g_OrgPerMaterialCb)
-        g_OrgPerMaterialCb(material, baseTex, mask);   // sub_5E9CA0: c16 (cached) + sampler-0 bind
+        g_OrgPerMaterialCb(material, baseTex, mask);
 }
 
-// Install the shim into the per-draw callback slot (dword_85B34C). Captures the engine's current
-// value as the original, then points the slot at our shim. Idempotent while ours is installed; the
-// engine re-points (sub_5E9F80) / clears (sub_5E9AA0) the slot at pass boundaries, so the shim is
-// live only across the mode-3 body pass. Called at the body PS bind and re-asserted per draw.
+// Point the engine's per-draw material callback slot (0x85B34C) at our shim, saving the original.
+// The engine re-points/clears the slot at pass boundaries, so we re-assert it per draw while the
+// body PS is active.
 static inline void EnsurePerMaterialHook()
 {
-    void** slot = (void**)0x85B34C;                    // writable data global (engine mov's into it)
+    void** slot = (void**)0x85B34C;
     void*  cur  = *slot;
-    if (cur && cur != (void*)&Hook_PerMaterialCb)      // skip if torn-down (0) or already ours
+    if (cur && cur != (void*)&Hook_PerMaterialCb)      // skip if cleared or already ours
     {
-        g_OrgPerMaterialCb = (PerMaterialCb_t)cur;     // = sub_5E9CA0 in mode-3 (only installed while g_BodyPSActive)
+        g_OrgPerMaterialCb = (PerMaterialCb_t)cur;
         *slot = (void*)&Hook_PerMaterialCb;
     }
 }
 
 static HRESULT WINAPI Hook_SetVertexShaderConstantF(IDirect3DDevice9* pDevice, UINT StartReg, const float* pData, DWORD Count)
 {
-    // No EMA light-smoothing: pass light colors (c0-c2), directions (c12-c14) and
-    // ambient (c3) through RAW; just keep the PS-forwarding cache (c0-c3) in sync with
-    // what the VS receives. An earlier EMA rewrote those toward a smoothed value, and
-    // layered on the engine's churning nearest-N light selection (sub_518100) it made
-    // the specular highlights wander/"bounce".
-    for (UINT i = 0; i < Count; ++i)
-    {
-        UINT reg = StartReg + i;
-        if (reg < 4)
-            memcpy(g_CachedVSConst + reg * 4, pData + i * 4, 16);
-        else if (reg >= 12 && reg <= 14)                      // object-space light dirs (for PS world-space loop)
-            memcpy(g_CachedLightDirW + (reg - 12) * 4, pData + i * 4, 16);
-        else if (reg >= 20 && reg <= 22)                      // inverse-world normal rows (per draw)
-            memcpy(g_CachedNormRow + (reg - 20) * 4, pData + i * 4, 16);
-    }
-
-    // Forward the per-vehicle light state to the body PS LIVE as the engine writes it.
-    // The engine's PS cache suppresses per-vehicle PS re-binds (traffic bodies draw back-to-
-    // back with one 648B38 bind), so a PS-bind-only forward strands ALL traffic on a single
-    // stale colour/ambient snapshot (observed: all traffic flips colour together, player goes
-    // dark). Pushing on the c0-c2 / c3 writes keeps c5-c7 (colours) and c4 (ambient) current —
-    // the directions (c8-c10) are already refreshed per draw on the c20-c22 trigger below.
-    if (StartReg <= 2 && (StartReg + Count) > 0)
-        pDevice->SetPixelShaderConstantF(5, g_CachedVSConst,      3); // c5-c7 = LightColor0-2 (VS c0-c2)
+    // Cache the scene ambient (VS c3) as the engine uploads it, for the body PS's c4.
     if (StartReg <= 3 && (StartReg + Count) > 3)
-        pDevice->SetPixelShaderConstantF(4, g_CachedVSConst + 12, 1); // c4 = Ambient (VS c3)
+        memcpy(g_CachedAmbient, pData + (3 - StartReg) * 4, 16);
 
-    // On the per-draw normal-row upload (c20-c22) during a body draw, recompute the PS
-    // world-space light dirs so they're current for this model's submeshes. Also re-assert the
-    // per-material shim here: this fires per draw (sub_5E9BA0, before the submesh loop), so the
-    // shim survives even if the engine re-points the callback slot per vehicle.
+    // Refresh the body-PS light set per draw. The PS is bound once for back-to-back traffic bodies, so
+    // pushing only at the PS bind would strand them all on one snapshot. The per-draw normal-row upload
+    // (c20-c22) fires once per model, after the detour has harvested that model's lights — re-push here.
     if (g_BodyPSActive && StartReg <= 22 && (StartReg + Count) > 20)
     {
-        UploadWorldSpaceLights(pDevice);
+        UploadLights(pDevice);
         EnsurePerMaterialHook();
     }
 
@@ -564,15 +554,13 @@ static HRESULT WINAPI Hook_SetPixelShader(IDirect3DDevice9* pDevice, IDirect3DPi
     {
         if (pShader == sPS_648B38_handle)
         {
-            g_ActiveFogReg  = 2;     // PS_648B38 reads manual fog from c2
-            g_BodyPSActive  = true;  // gate the per-draw world-space light recompute
-            EnsurePerMaterialHook(); // shim dword_85B34C → per-submesh material Specular reaches c3
+            g_ActiveFogReg  = 2;     // body PS reads manual fog from c2
+            g_BodyPSActive  = true;  // gate the per-draw light upload
+            EnsurePerMaterialHook(); // per-submesh material Specular → c3
 
-            // IBL — resolve MAX_MIP (c1.y) once from the s1 environment cube.
-            // texCUBElod maps roughness→LOD as roughness * MAX_MIP, so the cube
-            // needs a full mip chain. Query the bound cube's level count; if it has none,
-            // GenerateMipSubLevels (a no-op unless it was created D3DUSAGE_AUTOGENMIPMAP,
-            // in which case MAX_MIP stays 0 → always-sharp reflections, roughness inert).
+            // Resolve MAX_MIP (c1.y) once from the env cube's level count (roughness→LOD needs a mip
+            // chain). GenerateMipSubLevels is a no-op unless the cube was created autogen-mipmap, in
+            // which case MAX_MIP stays 0 → sharp reflections only.
             static bool s_maxMipResolved = false;
             if (!s_maxMipResolved)
             {
@@ -585,7 +573,6 @@ static HRESULT WINAPI Hook_SetPixelShader(IDirect3DDevice9* pDevice, IDirect3DPi
                         if (levels <= 1) { tex->GenerateMipSubLevels(); levels = tex->GetLevelCount(); }
                         g_PS648B38[5] = (levels > 1) ? float(levels - 1) : 0.0f;  // c1.y = MAX_MIP
                         s_maxMipResolved = true;
-                        hook_output("[Shader][C1] env cube levels=%lu -> MAX_MIP=%.1f", levels, g_PS648B38[5]);
                     }
                     tex->Release();
                 }
@@ -594,42 +581,33 @@ static HRESULT WINAPI Hook_SetPixelShader(IDirect3DDevice9* pDevice, IDirect3DPi
             pDevice->SetPixelShaderConstantF(0, g_PS648B38,          2);  // c0/c1 tunable params (c1.y=MAX_MIP)
             pDevice->SetPixelShaderConstantF(2, g_FogColor,          1);  // c2 = fog color (ps_3_0 manual fog)
             static const float kWhiteSpec[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-            pDevice->SetPixelShaderConstantF(3, kWhiteSpec,          1);  // c3 seed = white (full highlight); the shim refines it per submesh
-            pDevice->SetPixelShaderConstantF(4, g_CachedVSConst + 12, 1); // c4 = Ambient  (VS c3, cached — scene-lit diffuse)
-            pDevice->SetPixelShaderConstantF(5, g_CachedVSConst,      3); // c5-c7 = LightColors (VS c0-c2, cached)
+            pDevice->SetPixelShaderConstantF(3, kWhiteSpec,          1);  // c3 seed = white; the shim refines it per submesh
 
-            // Real-loop inputs: integer light count (i0) drives `rep i0`; world-space dirs (c8..).
-            const int lightCountI[4] = { g_DirLightCount, 0, 0, 0 };
-            pDevice->SetPixelShaderConstantI(0, lightCountI, 1);          // i0 = loop trip count
-            UploadWorldSpaceLights(pDevice);                            // c8-c10 (refreshed per draw too)
+            UploadLights(pDevice);   // c4 ambient, c17.. colours, c33.. dirs, i0 count (re-pushed per draw)
 
-            // Neutralise the stale material Diffuse (c11). Textured body submeshes skip
-            // the engine's c11 upload (sub_5FB480 `!*this` gate) and would inherit a leaked material
-            // Diffuse → tinted paint. Force c11 = white at the bind so the body is coloured by its
-            // texture. (Diffuse stays global/white by design; route #2 delivers only per-material
-            // SPECULAR — via the c3 shim — without disturbing the body's albedo.)
+            // Force material Diffuse (c11) white: textured body submeshes skip the engine's c11 upload
+            // and would otherwise inherit a stale value that tints the paint.
             static const float kWhiteC11[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
             pDevice->SetVertexShaderConstantF(11, kWhiteC11, 1);
         }
         else if (pShader == sPS_676088_handle)
         {
-            // DORMANT while chrome is stubbed: sPS_676088_handle stays null (handle only
-            // recorded on an actual swap), so this never runs. Live only if chrome is re-enabled.
-            g_ActiveFogReg = -1;  // chrome is ps_2_a → FFP fog, no manual-fog push
+            // Dormant while chrome is stubbed (handle stays null). Live only if chrome is re-enabled.
+            g_ActiveFogReg = -1;  // chrome uses FFP fog
             g_BodyPSActive = false;
-            pDevice->SetPixelShaderConstantF(0, g_PS676088, 1);    // c0 (FresnelScale, EnvironmentScale)
+            pDevice->SetPixelShaderConstantF(0, g_PS676088, 1);
         }
         else
         {
-            g_ActiveFogReg = -1;  // a shader we don't manage — no manual-fog push
+            g_ActiveFogReg = -1;  // not one of ours — no manual-fog push
             g_BodyPSActive = false;
         }
     }
     return hr;
 }
 
-// Capture D3DRS_FOGCOLOR for ps_3_0 manual fog and push it to the active PS's fog
-// register so a mid-pass change reaches the cached PS. D3DRS_FOGCOLOR=34, 0xAARRGGBB.
+// Capture D3DRS_FOGCOLOR and push it to the active PS's fog register, so a mid-pass change reaches
+// the cached PS. Colour is 0xAARRGGBB.
 static HRESULT WINAPI Hook_SetRenderState(IDirect3DDevice9* pDevice, D3DRENDERSTATETYPE State, DWORD Value)
 {
     if (State == D3DRS_FOGCOLOR)
@@ -644,6 +622,111 @@ static HRESULT WINAPI Hook_SetRenderState(IDirect3DDevice9* pDevice, D3DRENDERST
     return OrgSetRenderState(pDevice, State, Value);
 }
 
+// Capture the FFP view matrix (world→view) for the light world→view bridge (see WorldDirToView).
+// The engine sets D3DTS_VIEW while drawing FFP world geometry; the main-scene camera is set before
+// the vehicle body pass (env-cube faces also set it, but they precede the body draw).
+static HRESULT WINAPI Hook_SetTransform(IDirect3DDevice9* pDevice, D3DTRANSFORMSTATETYPE State, const D3DMATRIX* pMatrix)
+{
+    if (State == D3DTS_VIEW && pMatrix)
+        memcpy(g_ViewMatrix, pMatrix, sizeof(g_ViewMatrix));
+    return OrgSetTransform(pDevice, State, pMatrix);
+}
+
+// Per-cell nearest-N light gather. Replaces the engine's own insert (0x518100), whose flawed
+// eviction leaves an unstable set that flickers as the car moves. This does a correct gather:
+// append while under cap, else evict the true farthest iff the new source is closer. It also
+// harvests our own nearest-K set for the PS lighting. State carries across the cell block in the
+// engine's globals: count at 0x6C2638 (read at entry, written at exit), worst-slot/threshold at
+// 0x6C262C/30/34 (kept coherent); out[]/dist[] are the caller's buffers.
+//
+// __fastcall(this→ECX, dummy→EDX, 6 stack args) matches the engine's __thiscall + retn 18h.
+struct LightNode { float x, y, z; LightNode* next; };   // +0x00 pos, +0x0C next
+
+static void __fastcall Hook_sub_518100(
+    void* thisptr, void* /*edx*/,
+    int col, int row, const float* query, void** out, float* dist2, int capN)
+{
+    if (!thisptr) return;
+    int    gridWidth   = *(int*)   ((char*)thisptr + 0x420);
+    void** bucketArray = *(void***)((char*)thisptr + 0x21C);
+    if (!bucketArray) return;
+
+    LightNode* node = (LightNode*)bucketArray[col + row * gridWidth];
+
+    int count = *(int*)0x6C2638;            // carry-in: sources filled so far (across cells)
+    const float qx = query[0], qy = query[1], qz = query[2];
+
+    // Cache the query (= car pos) for UploadLights, and reset our nearest-K set at the first cell.
+    g_LightQueryPos[0] = qx; g_LightQueryPos[1] = qy; g_LightQueryPos[2] = qz;
+    if (count == 0) g_DynCount = 0;
+    int dynK = g_MaxDynLights; if (dynK > KMAX) dynK = KMAX;
+
+    for (; node; node = node->next)
+    {
+        if (!(qy < node->y))                 // eligibility: source must be above the query point
+            continue;
+        float dx = node->x - qx, dy = node->y - qy, dz = node->z - qz;
+        float d2 = dx * dx + dy * dy + dz * dz;
+
+        // Harvest this node into our nearest-K set (pos + colour P[7..9] + range P[0xB], P=*(node+0x1C)).
+        {
+            int slot = -1;
+            if (g_DynCount < dynK) slot = g_DynCount++;
+            else
+            {
+                int wi = 0;
+                for (int i = 1; i < dynK; ++i)
+                    if (g_DynLights[i].d2 > g_DynLights[wi].d2) wi = i;
+                if (d2 < g_DynLights[wi].d2) slot = wi;
+            }
+            if (slot >= 0)
+            {
+                DynLight& dl = g_DynLights[slot];
+                dl.pos[0] = node->x; dl.pos[1] = node->y; dl.pos[2] = node->z;
+                dl.d2 = d2;
+                const float* P = *(const float* const*)((const char*)node + 0x1C);
+                if (P) { dl.rgb[0] = P[7]; dl.rgb[1] = P[8]; dl.rgb[2] = P[9]; dl.range = P[0xB]; }
+                else   { dl.rgb[0] = dl.rgb[1] = dl.rgb[2] = 1.0f; dl.range = 100.0f; }
+            }
+        }
+
+        if (count < capN)                    // room → append (engine's own out[]/dist[] set)
+        {
+            out[count]   = node;
+            dist2[count] = d2;
+            ++count;
+        }
+        else if (capN > 0)                   // full → evict the true farthest if we're closer
+        {
+            int wi = 0;
+            for (int i = 1; i < capN; ++i)
+                if (dist2[i] > dist2[wi]) wi = i;
+            if (d2 < dist2[wi]) { out[wi] = node; dist2[wi] = d2; }
+        }
+    }
+
+    *(int*)0x6C2638 = count;                 // carry-out: count
+
+    int wi = 0;                              // keep worst-slot/threshold carry coherent
+    for (int i = 1; i < count; ++i)
+        if (dist2[i] > dist2[wi]) wi = i;
+    *(int*)0x6C262C   = (count > 0) ? wi : 0;
+    *(float*)0x6C2630 = (count > 0) ? dist2[wi] : 0.0f;
+    *(float*)0x6C2634 = *(float*)0x6C2630;
+}
+
+// Overwrite the gather's entry (0x518100) with a 5-byte jmp to our version. Full replacement — no
+// trampoline; the leftover bytes at 0x518105-06 are never reached.
+static void InstallGatherDetour()
+{
+    BYTE* p = (BYTE*)0x518100;
+    DWORD old;
+    VirtualProtect(p, 5, PAGE_EXECUTE_READWRITE, &old);
+    p[0] = 0xE9;
+    *(DWORD*)(p + 1) = (DWORD)((BYTE*)&Hook_sub_518100 - (p + 5));
+    VirtualProtect(p, 5, old, &old);
+}
+
 static void __cdecl Hook_ShaderInitializationStage()
 {
     IDirect3DDevice9* device = DevicePtr.get();
@@ -652,6 +735,7 @@ static void __cdecl Hook_ShaderInitializationStage()
         void** vtable = *(void***)device;
 
         OrgSetRenderState           = (SetRenderState_t)vtable[57];
+        OrgSetTransform             = (SetTransform_t)vtable[44];
         OrgCreateVertexShader       = (CreateVertexShader_t)vtable[91];
         OrgSetVertexShader          = (SetVertexShader_t)vtable[92];
         OrgSetVertexShaderConstantF = (SetVSConstF_t)vtable[94];
@@ -659,14 +743,13 @@ static void __cdecl Hook_ShaderInitializationStage()
         OrgSetPixelShader           = (SetPixelShader_t)vtable[107];
 
         DWORD old;
+        VirtualProtect(&vtable[44],  sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[44]  = &Hook_SetTransform;            VirtualProtect(&vtable[44],  sizeof(void*), old, &old);
         VirtualProtect(&vtable[57],  sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[57]  = &Hook_SetRenderState;          VirtualProtect(&vtable[57],  sizeof(void*), old, &old);
         VirtualProtect(&vtable[91],  sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[91]  = &Hook_CreateVertexShader;       VirtualProtect(&vtable[91],  sizeof(void*), old, &old);
         VirtualProtect(&vtable[92],  sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[92]  = &Hook_SetVertexShader;           VirtualProtect(&vtable[92],  sizeof(void*), old, &old);
         VirtualProtect(&vtable[94],  sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[94]  = &Hook_SetVertexShaderConstantF; VirtualProtect(&vtable[94],  sizeof(void*), old, &old);
         VirtualProtect(&vtable[106], sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[106] = &Hook_CreatePixelShader;         VirtualProtect(&vtable[106], sizeof(void*), old, &old);
         VirtualProtect(&vtable[107], sizeof(void*), PAGE_EXECUTE_READWRITE, &old); vtable[107] = &Hook_SetPixelShader;            VirtualProtect(&vtable[107], sizeof(void*), old, &old);
-
-        hook_output("[Shader] VTable hooks installed (57/91/92/94/106/107)");
     }
 
     typedef void(__cdecl* InitAllShaders_t)();
@@ -681,49 +764,24 @@ void ShaderHandler::Install()
         return;
     }
 
-    // ── Exposed mc2hook.ini [Shader] knobs ────────────────────────────────────
-    // EnvmapStrength = s1 env cube ("envmap"); HeadlightMask* = s2 "fx_headlight_mask"
-    // (projectedmaskcar). Cook-Torrance direct specular.
+    // mc2hook.ini [Shader] tunables (pushed to the body PS at bind).
     g_PS648B38[0] = HookConfig::GetFloat("Shader", "Reflectance",         0.04f);  // F0 (dielectric clearcoat)
-    g_PS648B38[1] = HookConfig::GetFloat("Shader", "EnvmapStrength",      6.00f);  // s1 envmap reflection strength
-    g_PS648B38[2] = HookConfig::GetFloat("Shader", "SpecularIntensity",   70.00f);  // direct Cook-Torrance spec scale (× material Specular c3)
-    g_PS648B38[3] = HookConfig::GetFloat("Shader", "MaskScale",  3.60f);  // fx_headlight_mask (s2) projected-mask gain
-    g_PS648B38[4] = HookConfig::GetFloat("Shader", "HeadlightIntensity", 1.0f);  // headlight-mask projection blend (0=off)
+    g_PS648B38[1] = HookConfig::GetFloat("Shader", "EnvmapStrength",      5.00f);  // env-cube reflection strength
+    g_PS648B38[2] = HookConfig::GetFloat("Shader", "SpecularIntensity",   2.00f);  // direct specular scale
+    g_PS648B38[3] = HookConfig::GetFloat("Shader", "MaskScale",           3.50f);  // headlight-mask gain on the body
+    g_PS648B38[4] = HookConfig::GetFloat("Shader", "HeadlightIntensity",  1.00f);   // headlight-mask blend (0=off)
 
-    // ── Baked, NOT exposed in the INI ────────────────────────────────────────
-    g_DirLightCount = 3;      // directional lights consumed by the PS loop; max 3; needs the cap bump below
+    // K nearest lights driven to the PS (1..16); higher K = fewer selection pops.
+    g_MaxDynLights = (int)HookConfig::GetFloat("Shader", "MaxDynamicLights", 8.0f);
+    g_LightFalloff = HookConfig::GetFloat     ("Shader", "LightFalloff",     1.0f);
+    if (g_MaxDynLights < 1)    g_MaxDynLights = 1;
+    if (g_MaxDynLights > KMAX) g_MaxDynLights = KMAX;
 
-    g_PS676088[0] = g_PS648B38[0];  // chrome inherits Reflectance (dormant)
-    g_PS676088[1] = g_PS648B38[1];  // chrome inherits EnvmapStrength (dormant)
+    g_PS676088[0] = g_PS648B38[0];  // chrome inherits (dormant)
+    g_PS676088[1] = g_PS648B38[1];
 
-    // Light-selection patch — flips a "dead gate" jnz→jz at 0x5181CE (`test ah,41h` @0x5181CB).
-    // ⚠ This alone does NOT fix the selection instability — the real bug is sub_518100's
-    // threshold/argmax maintenance (seed dword_6C2630/6C2634 to +inf + track the MAX so eviction
-    // drops the FARTHEST; the complete fix would be a sub_518100 detour). This patch is baked on
-    // but PARTIAL; observed harmless (in-game A/B showed no visible difference — which also
-    // confirms the jz polarity isn't inverted). The cap bump below likewise only relocates the
-    // churn boundary.
-    {
-        DWORD old;
-        VirtualProtect((void*)0x5181CE, 1, PAGE_EXECUTE_READWRITE, &old); *(BYTE*)0x5181CE = 0x74; VirtualProtect((void*)0x5181CE, 1, old, &old);
-        hook_output("[Shader] Gather fix applied (0x5181CE jnz->jz)");
-    }
-
-    // Cap bump 2->3 in sub_5198C0 — applied ONLY when the shader actually consumes a 3rd
-    // directional light (DirLightCount==3). Stock (in-game directional cap = 2) clears c2/c14,
-    // so without the bump the loop's 3rd light is black; tying it to DirLightCount keeps engine
-    // selection and the PS loop count consistent.
-    if (g_DirLightCount >= 3)
-    {
-        DWORD old;
-        VirtualProtect((void*)0x5198CF, 1, PAGE_EXECUTE_READWRITE, &old); *(BYTE*)0x5198CF = 0x03; VirtualProtect((void*)0x5198CF, 1, old, &old);
-        VirtualProtect((void*)0x5198F9, 1, PAGE_EXECUTE_READWRITE, &old); *(BYTE*)0x5198F9 = 0x03; VirtualProtect((void*)0x5198F9, 1, old, &old);
-    }
-
-    // Per-material Specular reaches the body PS via the dword_85B34C callback shim (installed at the
-    // body PS bind, see EnsurePerMaterialHook) — NOT a global engine patch. The earlier MaterialUngate
-    // byte-patch (NOP jnz @0x5FB4D5) was removed: it un-gated sub_5FB480 for EVERY textured submesh in
-    // the game (rims/glass/road/props), darkening the whole world. The shim is scoped to mode-3 only.
+    // Replace the engine's flickery light gather with our stable version (also harvests our light set).
+    InstallGatherDetour();
 
     InstallCallback("ShaderHandler::EarlyInit", "Intercept early engine shader setup",
         &Hook_ShaderInitializationStage, { cb::call(0x5F15EC) });
