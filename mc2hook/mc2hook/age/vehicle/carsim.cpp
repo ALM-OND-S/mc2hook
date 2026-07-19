@@ -654,9 +654,24 @@ void vehCarSim::SetFrictionHandling(float friction)
     }
 }
 
+void vehCarSim::sub_4D2F60()
+{
+    hook::Thunk<0x4D2F60>::Call<float>(this); // Call original
+}
+
 float vehCarSim::sub_4D2860(float a2) // Compute something
 {
     return hook::Thunk<0x4D2860>::Call<float>(this, a2); // Call original
+}
+
+void vehCarSim::sub_569A80(const char* carName)
+{
+    hook::Thunk<0x569A80>::Call<void>(this, carName); // Call original
+}
+
+void vehCarSim::sub_575060(void* a2)
+{
+    hook::Thunk<0x575060>::Call<void>(this, a2); // Call original
 }
 
 // WIP

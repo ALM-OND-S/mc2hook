@@ -10,6 +10,8 @@ class vehNitro;
 class mcCarSSTurbo;
 class vehDamage;
 class vehWheel;
+class carAIInfo;
+class vehEntity;
 
 struct vehWheels
 {
@@ -29,7 +31,7 @@ public:
 	vehEngine* m_Engine;
 	vehTransmission* m_Transmission;
 	int m_NumWheels;
-	vehWheels* m_WheelsStruct; //vehWheel* m_WheelFront; // void*
+	vehWheels* m_WheelsStruct; //vehWheel* m_WheelFront;
 	int m_NumDrivetrains;
 	vehDrivetrain* m_Drivetrain;
 	int m_NumAxles;
@@ -60,7 +62,7 @@ public:
 	float field_A8;
 	float field_AC;
 	float m_Speed;
-	float field_B4;
+	int field_B4;
 	float m_Mass;
 	Vector3 m_Size;
 	Vector3 m_InertiaBox;
@@ -98,22 +100,22 @@ public:
 	int dword_14c;
 	int dword_150;
 	float dword_154;
-	float dword_158;
-	float dword_15c;
+	float m_HillHorsepowerFactor;
+	float m_CarFrictionHandlingWipeout;
 	float dword_160;
-	int dword_164;
-	float dword_168;
-	int dword_16c;
-	int dword_170;
-	float dword_174;
-	float dword_178;
-	int dword_17c;
+	float m_LandingDampFactor;
+	float m_AeroDampFactor;
+	float m_MediumLod;
+	float m_LowLod;
+	float m_VeryLowLod;
+	float m_SSSValue;
+	int m_SSSThreshold;
 	int dword_180;
 	char field_184;
 	bool m_BurnoutCharged;
 	char field_186;
 	char field_187;
-	float dword_188;
+	float m_BurnoutThresholdSpeed;
 	float m_BurnoutValue;
 	float m_BurnoutIncreaseSpeed;
 	float m_BurnoutDecreaseSpeed;
@@ -121,7 +123,7 @@ public:
 	float m_BurnoutBoostSpeed;
 	int m_BurnoutCharging;
 	float dword_1a4;
-	float dword_1a8;
+	float m_CenterOfMassY;
 	float m_SteeringLimit;
 	float m_Airtime;
 	float m_SomeBrake;
@@ -130,10 +132,14 @@ public:
 	int dword_1c0;
 	int dword_1c4;
 	int dword_1c8;
-	int dword_1cc;
+	carAIInfo* m_AIInfo;
 	vehNitro* m_Nitro;
 	mcCarSSTurbo* m_SSTurbo;
 	vehDamage* m_Damage;
+
+public:
+	vehCarSim()  { hook::Thunk<0x4D22E0>::Call<void>(this); }
+	~vehCarSim() { hook::Thunk<0x4D23F0>::Call<void>(this); }
 
 public:
 	void UpdateControls();
@@ -145,6 +151,21 @@ public:
 	void SetCenterOfMass(const Vector3& cg); // Set the simulation center of mass offset from instance origin
 	void SetFrictionHandling(float friction);
 
+	void sub_4D2F60(); // ComputeConstants?
 	float sub_4D2860(float a2);
+	void sub_569A80(const char* carName); // Some Load
+	void sub_575060(void* a2);
+
+public:
+	void MakeCollider(const char* carName, vehEntity* entity) { hook::Thunk<0x4D2440>::Call<void>(this, carName, entity); }
+	void MakeAero(const char* carName)                        { hook::Thunk<0x4D2490>::Call<void>(this, carName); }
+	void MakeFluid(const char* carName)                       { hook::Thunk<0x4D24E0>::Call<void>(this, carName); }
+	void MakeTransmission(const char* carName)                { hook::Thunk<0x569370>::Call<void>(this, carName); }
+	void MakeEngine(const char* carName)                      { hook::Thunk<0x569320>::Call<void>(this, carName); }
+	void MakeWheels(const char* carName)                      { hook::Thunk<0x56AAB0>::Call<void>(this, carName); }
+	void MakeDrivetrains(const char* carName)                 { hook::Thunk<0x5693C0>::Call<void>(this, carName); }
+	void MakeAxles(const char* carName)                       { hook::Thunk<0x5694B0>::Call<void>(this, carName); }
+	void MakeSuspensions(const char* carName)                 { hook::Thunk<0x5695E0>::Call<void>(this, carName); }
 };
 
+static_assert(sizeof(vehCarSim) == 0x1DC, "vehCarSim size mismatch");

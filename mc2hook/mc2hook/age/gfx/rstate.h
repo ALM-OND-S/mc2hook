@@ -29,6 +29,7 @@ public:
     //static void SetLighting(uint8_t const& val);
     static void SetFogStart(float val);
     static void SetFogEnd(float val);
+    static void SetBlendSet(int blendSet, uint8_t alpha);
 
     static Matrix44 GetCameraMatrix();
     

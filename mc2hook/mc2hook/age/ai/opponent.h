@@ -4,6 +4,24 @@
 
 class vehEntity;
 
+struct aiOpponentDesc
+{
+    uint8_t m_CarIndex;
+    uint8_t field_01;
+    uint8_t field_02;
+    uint8_t field_03;
+    uint8_t field_04;
+    uint8_t field_05;
+    uint8_t field_06;
+    uint8_t field_07;
+    uint8_t field_08;
+    uint8_t field_09;
+    bool m_IsCompetitor;
+    uint8_t field_0B;
+    float m_MaxThrottle;
+    char buffer[108];
+};
+
 class aiOpponent
 {
 public:
@@ -17,7 +35,7 @@ public:
     vehEntity* m_Entity;
     Vector3 m_StartPos;
     float m_StartDir;
-    int dword_30;
+    int m_Team;
     int dword_34;
     int dword_38;
     int dword_3C;
@@ -37,6 +55,14 @@ public:
     float m_HalfWidthSq;
     int dword_78;
     int dword_7C;
+    char buffer[940];
+
+public:
+    aiOpponent()  { hook::Thunk<0x4B0030>::Call<void>(this); }
+    ~aiOpponent() { hook::Thunk<0x4AFB10>::Call<void>(this); }
+
+public:
+    bool Init(int index, const char* carName, const aiOpponentDesc* desc, int a5, bool a6);
 };
 
-// Size: 0x42C ?
+static_assert(sizeof(aiOpponent) == 0x42C, "aiOpponent size mismatch");

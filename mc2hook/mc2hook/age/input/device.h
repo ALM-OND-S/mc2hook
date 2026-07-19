@@ -19,6 +19,7 @@ public:
     bool sub_467E90(int a2);
     void sub_467DF0(); // UpdateInputDevices?
     bool sub_467FA0();
+    void sub_468500();
 
     static hook::Type<InputMapEntry*> g_InputMap;
 };

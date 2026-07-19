@@ -4,6 +4,9 @@
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
 
+extern HMODULE g_ModuleHandle;
+const char* GetMC2HookVersion();
+
 #if DIRECTINPUT_VERSION == 0x0700
 typedef HRESULT(WINAPI* LPFNDIRECTINPUTCREATE)(HINSTANCE, DWORD, LPVOID*, LPUNKNOWN);
 

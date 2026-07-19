@@ -17,7 +17,7 @@ public:
 	vehCarSim* m_CarSim;
 	vehModel* m_Model;
 	vehAudio* m_Audio;
-	void* m_Damage2;
+	vehDamage* m_Damage;
 	void* m_Feedback;
 	void* m_MaybePhysBehavior;
 	vehStuck* m_Stuck;
@@ -26,7 +26,8 @@ public:
 	int dword_6c;
 	void* m_WheelPtx;
 	int dword_74;
-	vehDamage* m_Damage;
+	void* m_Damage2;
+	int dword_3c;
 
 public:
 	void Update();

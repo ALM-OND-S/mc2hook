@@ -1,7 +1,6 @@
 #include "rstate.h"
 #include <mc2hook\mc2hook.h>
 #include <age/vector/matrix44.h>
-#include <age/core/output.h>
 
 declfield(gfxState::sm_Camera) = 0x858548;
 declfield(gfxState::sm_View) = 0x858440;
@@ -101,4 +100,9 @@ void gfxState::SetFogEnd(float val) {
     static float fogEndMultiplier = HookConfig::GetFloat("Graphics", "FogEndMultiplier", 1.0f);
     float modVal = val * fogEndMultiplier;
     hook::StaticThunk<0x5EE880>::Call<void>(modVal);
+}
+
+void gfxState::SetBlendSet(int blendSet, uint8_t alpha)
+{
+    hook::StaticThunk<0x5EE220>::Call<void>(blendSet, alpha);
 }

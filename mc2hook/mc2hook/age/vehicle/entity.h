@@ -1,17 +1,15 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
-#include <age/vector/matrix34.h>
 #include <age/vehicle/car.h>
+#include <age/physics/phinst.h>
 
-class phArchetype;
-class mcCar;
-
-class vehEntity {
+class vehEntity
+{
 public:
-	void* m_Vtable;
-	phArchetype* m_Archetype;
-	int dword_08;
-	int dword_0c;
-	Matrix34 m_Transform;
+	phInst m_PhysInst;
 	mcCar m_Car;
+
+public:
+	vehEntity()  { hook::Thunk<0x4D1580>::Call<void>(this); }
+	~vehEntity() { hook::Thunk<0x4D1DA0>::Call<void>(this); }
 };

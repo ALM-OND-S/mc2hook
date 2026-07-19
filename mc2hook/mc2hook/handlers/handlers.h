@@ -1,46 +1,44 @@
 #pragma once
-#include <handlers\InitHandler.h>
-#include <handlers\zipIintHandler.h>
-#include <handlers\CustomExceptionHandler.h>
-#include <handlers\PrinterHandler.h>
-#include <handlers\FontCrashFixHandler.h>
-#include <handlers\RemoveForcedArgsHandler.h>
-#include <handlers\OpenSpyHandler.h>
-#include <handlers\ChatHandler.h>
+#include <handlers/InitHandler.h>
+#include <handlers/zipIintHandler.h>
+#include <handlers/CustomExceptionHandler.h>
+#include <handlers/PrinterHandler.h>
+#include <handlers/FontCrashFixHandler.h>
+#include <handlers/RemoveForcedArgsHandler.h>
+#include <handlers/OpenSpyHandler.h>
+#include <handlers/ChatHandler.h>
 
-#include <handlers\CustomVehicleHandler.h>
-#include <handlers\SteeringSmootherHandler.h>
-#include <handlers\PathHandler.h>
-#include <handlers\zipEnumHandler.h>
-#include <handlers\TestPanelHandler.h>
-#include <handlers\InputHandler.h>
-#include <handlers\BorderlessHandler.h>
-#include <handlers\ReflectionFidelityHandler.h>
+#include <handlers/CustomVehicleHandler.h>
+#include <handlers/SteeringSmootherHandler.h>
+#include <handlers/PathHandler.h>
+#include <handlers/zipEnumHandler.h>
+#include <handlers/TestPanelHandler.h>
+#include <handlers/InputHandler.h>
+#include <handlers/BorderlessHandler.h>
+#include <handlers/ReflectionFidelityHandler.h>
 #include <handlers/OnlineBangersHandler.h>
 #include <handlers/FreecamHandler.h>
 #include <handlers/MaxVelocityHandler.h>
 #include <handlers/AddressPrinterHandler.h>
 #include <handlers/ControllerScrollingFixHandler.h>
-#include <handlers/RDTSCFixHandler.h>
 #include <handlers/CityModelLimitHandler.h>
 #include <handlers/LevelExtentsHandler.h>
 #include <handlers/CarShadowHandler.h>
-#include <handlers\FPSCounterHandler.h>
 #include <handlers/TimeWarpHandler.h>
 #include <handlers/DeadZoneHandler.h>
 #include <handlers/BurnoutHandler.h>
 #include <handlers/GravityHandler.h>
 #include <handlers/CPUPlayerVehiclesHandler.h>
 #include <handlers/REHandler.h>
-#include <handlers\TrafficDistanceHandler.h>
+#include <handlers/TrafficDistanceHandler.h>
 #include <handlers/ShaderHandler.h>
 #include <handlers/RenderDistanceHandler.h>
-#include <handlers\StateResearchHook.h>
+#include <handlers/StateResearchHook.h>
 
 // Installed before engine init
 static void InstallHandlersPreEngineInit()
 {
-    InstallHandler<REHandler>("RE Handler");
+    //InstallHandler<REHandler>("RE Handler");
     InstallHandler<InputHandler>("Input Handler");
     InstallHandler<BorderlessHandler>("Borderless Handler");
 }
@@ -62,7 +60,9 @@ static void InstallHandlersPostEngineInit()
 
 // Installed at game launch
 static void InstallMainHandlers()
-{
+{    
+    InstallHandler<REHandler>("RE Handler");
+
     InstallHandler<CustomExceptionHandler>("Custom Exception Handler");
     InstallHandler<PrinterHandler>("Printer Handler");
     InstallHandler<zipInitHandler>("ZIP Handler");
@@ -75,11 +75,9 @@ static void InstallMainHandlers()
     InstallHandler<ReflectionFidelityHandler>("Reflection Fidelity Handller");
     InstallHandler<FreeCamHandler>("Free Cam Handler");
     InstallHandler<ControllerScrollingFixHandler>("Controller Scrolling Fix");
-    InstallHandler<RDTSCFixHandler>("RDTSC Fix Handler");
     InstallHandler<CityModelLimitHandler>("City Model Limit Handler"); // Breaks headlights, can be disabled in mc2hook.ini under Experimental
     InstallHandler<LevelExtentsHandler>("Level Extents Handler");
     InstallHandler<CarShadowHandler>("Car Shadow Handler");
-    InstallHandler<FPSCounterHandler>("FPS Counter Handler");
     InstallHandler<TimeWarpHandler>("Time Warp Handler");
     InstallHandler<DeadZoneHandler>("Dead Zone Handler");
     InstallHandler<GravityHandler>("Gravity Handler");

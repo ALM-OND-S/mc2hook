@@ -8,7 +8,7 @@ class vehAudio;
 class vehDamage;
 class ioDeviceWrapper;
 
-class vehInput {
+class vehInput { // Rename to vehPlayerInput?
 public:
     void* m_Vtable;
     int dword_04;
@@ -43,7 +43,7 @@ public:
     int dword_3c;
     int dword_40;                      // Camera view index (0-3)
     int dword_44;                      // Some gear-related value
-    int dword_48;
+    int m_TransmissionMode; // Maybe
     int dword_4c;
     vehEntity* m_Entity;
     int m_Drivable;                 // int8_t?
@@ -64,6 +64,11 @@ public:
     uint8_t net_8C[4];
 
 public:
+    vehInput(int a2, int a3, int a4)  { hook::Thunk<0x46B1D0>::Call<void>(this, a2, a3, a4); }
+    ~vehInput()                       { hook::Thunk<0x46B2F0>::Call<void>(this); }
+
+public:
+    void Init(vehEntity* entity, const char* carName);
     void Update();
     void UpdateFFB();
     void UpdateReplay();
@@ -73,6 +78,10 @@ public:
     void sub_46A760(int a2, int a3);
     void sub_46A7A0(float steer, float* gasbrake, float* brake, int* drivable);
     void SomethingReplay();
+
+    void sub_46A3A0(vehEntity* entity, const char* carName);
+    void sub_46A3F0(int playerId);
+    void sub_46A410(int playerId);
 
     static float PackSignedFloat(float value, int8_t* out)
     {

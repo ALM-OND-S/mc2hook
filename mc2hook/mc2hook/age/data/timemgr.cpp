@@ -9,10 +9,11 @@ declfield(datTimeManager::PrevElapsedTime)(0x8602D8);
 declfield(datTimeManager::FPS)(0x6797D8);
 declfield(datTimeManager::UnwarpedSeconds)(0x6797F4);
 
+bool datTimeManager::SpeedrunMode = false;
 float datTimeManager::PhysicsBaselineFPS = 60.0f;
 float datTimeManager::PhysicsSecondsScale = 0.0f;
 
-void datTimeManager::InitPhysicsBaselineFPS()
+void datTimeManager::Init()
 {
     PhysicsBaselineFPS = HookConfig::GetFloat("Physics", "PhysicsFixesBaselineFPS", 60.0f);
     
@@ -20,6 +21,8 @@ void datTimeManager::InitPhysicsBaselineFPS()
     float minPhysicsFixesBaselineFPS = 60.0f;
     if (PhysicsBaselineFPS < minPhysicsFixesBaselineFPS)
         PhysicsBaselineFPS = minPhysicsFixesBaselineFPS;
+
+    SpeedrunMode = HookConfig::GetBool("General", "SpeedrunMode", false);
 }
 
 float datTimeManager::GetSeconds()

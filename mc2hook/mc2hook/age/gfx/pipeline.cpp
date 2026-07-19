@@ -61,3 +61,8 @@ LRESULT gfxPipeline::InputWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM 
 
     return hook::StaticThunk<0x605830>::Call<LRESULT>(hWnd, msg, wParam, lParam); // Call original
 }
+
+void gfxPipeline::EndFrame()
+{
+    hook::StaticThunk<0x5F0F00>::Call<void>(); // Call original
+}

@@ -1,4 +1,5 @@
 #include "REHandler.h"
+#include <age/age.h>
 #include <age/camera/playercamera.h>
 #include <age/vehicle/transmission.h>
 #include <age/vehicle/engine.h>
@@ -28,9 +29,17 @@
 #include <age/mcgame/factory.h>
 #include <age/vehicle/automgr.h>
 #include <age/vehicle/car.h>
+#include <age/ai/opponentmgr.h>
 
 void REHandler::Install()
 {
+    // age
+    InstallCallback("ageEndFrame()", "ageEndFrame()",
+        &ageEndFrame, { cb::jmp(0x5ED0C0) });
+
+    InstallCallback("Timer::QuickTicks()", "Timer::QuickTicks()",
+        &Timer::QuickTicks, { cb::jmp(0x611C30) });
+
     // gfxPipeline
     InstallCallback("gfxPipeline::gfxWindowCreate()", "gfxPipeline::gfxWindowCreate()", &gfxPipeline::gfxWindowCreate, { cb::call(0x5F1338) });
 
@@ -41,7 +50,7 @@ void REHandler::Install()
             cb::jmp(0x5ED544) });
     
     // camTrackCS
-    InstallCallback("RE Handler (1)", "camTrackCS::UpdateSS()",
+    InstallCallback("camTrackCS::UpdateSS()", "camTrackCS::UpdateSS()",
         &camTrackCS::UpdateSS, {
             cb::jmp(0x46F140) });
 
@@ -416,15 +425,28 @@ void REHandler::Install()
             cb::call(0x40531B),
         });
 
-    // mcPlayerFactory
-    InstallCallback("mcPlayerFactory::MakeEntity()", "mcPlayerFactory::MakeEntity()",
-        &mcPlayerFactory::MakeEntity, {
+    // mcPlayerFactory / vehFactory
+    InstallCallback("mcPlayerFactory::Create()", "mcPlayerFactory::Create()",
+        &mcPlayerFactory::Create, {
             cb::call(0x468A41),
         });
 
+    InstallCallback("vehFactory::Create()", "vehFactory::Create()",
+        &vehFactory::Create, {
+            cb::call(0x4B01E9),
+        });
+
+    // TODO: vehFactory::Create
+
     // vehManager / vehAutoMgr
-    InstallVTableHook("vehAutoMgr::ManagerAddEntry()", &vehAutoMgr::ManagerAddEntry, { 0x644684 });
+    InstallVTableHook("vehAutoMgr::AddEntry()", &vehAutoMgr::AddEntry, { 0x644684 });
 
     // mcCar
     InstallVTableHook("mcCar::Update()", &mcCar::Update, { 0x644980 });
+
+    // aiOpponentManager
+    InstallCallback("aiOpponentManager::Init()", "aiOpponentManager::Init()",
+        &aiOpponentManager::Init, {
+            cb::call(0x40A1EC),
+        });
 };

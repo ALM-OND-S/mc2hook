@@ -12,4 +12,5 @@ public:
     static hook::Type<int> g_CurrentCar;
     static hook::Type<int> g_CurrentCarColor;
     static hook::Type<int> g_NumPlayers;
+    static hook::Type<int> g_MultiplayerTeamMode;
 };

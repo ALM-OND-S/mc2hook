@@ -1,6 +1,5 @@
 #include "car.h"
-
-//#include <age/core/output.h> //
+#include <age/core/output.h> //
 
 void mcCar::Update()
 {

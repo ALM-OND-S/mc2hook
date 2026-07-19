@@ -11,6 +11,7 @@ public:
     static hook::Type<float> ElapsedTime;
     static hook::Type<float> PrevElapsedTime;
     static hook::Type<float> UnwarpedSeconds;
+    static bool SpeedrunMode;
 
 public:
     static float GetSeconds();
@@ -21,9 +22,9 @@ public:
     static float GetPrevElapsedTime();
     static float GetUnwarpedSeconds();
 
-    static float PhysicsBaselineFPS;   // Read once from ini, min 30
+    static float PhysicsBaselineFPS;
     static float PhysicsSecondsScale;  // Cached: Seconds * PhysicsBaselineFPS, updated every frame
 
-    static void InitPhysicsBaselineFPS();
+    static void Init();
     void Update();
 };

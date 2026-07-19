@@ -51,10 +51,9 @@ public:
 public:
     static hook::Type<vehAutoMgr*> Instance;
 public:
-    vehAutoMgr* GetInstance();
+    static vehAutoMgr* GetInstance();
     mcCar* GetCar() { return *m_Car; }
     vehCarSim* GetSim() { return *m_Sim; }
 
-    int ManagerAddEntry(mcCar* a2);
-    //int AddEntry(int a2);
+    int AddEntry(mcCar* a2);
 };

@@ -79,11 +79,9 @@
     <ClCompile Include="handlers\InputHandler.cpp" />
     <ClCompile Include="handlers\LevelExtentsHandler.cpp" />
     <ClCompile Include="handlers\MaxVelocityHandler.cpp" />
-    <ClCompile Include="handlers\FPSCounterHandler.cpp" />
     <ClCompile Include="handlers\OnlineBangersHandler.cpp" />
     <ClCompile Include="handlers\PathHandler.cpp" />
     <ClCompile Include="handlers\PrinterHandler.cpp" />
-    <ClCompile Include="handlers\RDTSCFixHandler.cpp" />
     <ClCompile Include="handlers\ReflectionFidelityHandler.cpp" />
     <ClCompile Include="handlers\RemoveForcedArgsHandler.cpp" />
     <ClCompile Include="handlers\StateResearchHook.cpp" />
@@ -126,6 +124,10 @@
     <ClCompile Include="age\mcgame\factory.cpp" />
     <ClCompile Include="age\vehicle\car.cpp" />
     <ClCompile Include="age\ai\opponentmgr.cpp" />
+    <ClCompile Include="age\mcgame\racemgr.cpp" />
+    <ClCompile Include="age\ai\opponent.cpp" />
+    <ClCompile Include="age\data\parse.cpp" />
+    <ClCompile Include="age\age.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="age\camera\playercamera.h" />
@@ -234,11 +236,9 @@
     <ClInclude Include="handlers\InputHandler.h" />
     <ClInclude Include="handlers\LevelExtentsHandler.h" />
     <ClInclude Include="handlers\MaxVelocityHandler.h" />
-    <ClInclude Include="handlers\FPSCounterHandler.h" />
     <ClInclude Include="handlers\OnlineBangersHandler.h" />
     <ClInclude Include="handlers\PathHandler.h" />
     <ClInclude Include="handlers\PrinterHandler.h" />
-    <ClInclude Include="handlers\RDTSCFixHandler.h" />
     <ClInclude Include="handlers\ReflectionFidelityHandler.h" />
     <ClInclude Include="handlers\RemoveForcedArgsHandler.h" />
     <ClInclude Include="handlers\StateResearchHook.h" />
@@ -290,6 +290,10 @@
     <ClInclude Include="age\mcgame\factory.h" />
     <ClInclude Include="age\ai\opponent.h" />
     <ClInclude Include="age\ai\opponentmgr.h" />
+    <ClInclude Include="age\mcgame\racemgr.h" />
+    <ClInclude Include="age\mcgame\racebase.h" />
+    <ClInclude Include="age\vehicle\aiinfo.h" />
+    <ClInclude Include="age\age.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="discord-rpc\lib\discord_game_sdk.dll.lib" />

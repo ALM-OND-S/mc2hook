@@ -4,7 +4,7 @@ static float gravity;
 
 void GravityHandler::Install()
 {
+    bool speedrunMode = HookConfig::GetBool("General", "SpeedrunMode", false);
     gravity = HookConfig::GetFloat("Physics", "Gravity", -9.8f);
-
-    mem::write(0x6449BC, gravity);
+    if (!speedrunMode) mem::write(0x6449BC, gravity);
 }

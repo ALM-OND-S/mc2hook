@@ -89,6 +89,23 @@ static Vector3 ComputeAxleVelocity(const Vector3& worldVelocity, const Vector3& 
     return worldVelocity + rotVel;
 }
 
+void vehInput::Init(vehEntity* entity, const char* carName)
+{
+    //hook::Thunk<0x46A3A0>::Call<void>(this, entity, carName); // Call original
+
+    m_CarSim = entity->m_Car.m_CarSim;
+    m_Entity = entity;
+    m_CarSim->m_Transmission->m_Mode = m_TransmissionMode;
+
+    hook::Thunk<0x5E3380>::Call<void>(this, carName); // asNode::SetName
+
+    this->dword_08 |= 1u; // ?
+    
+    hook::Thunk<0x5E3320>::Call<void>(this); // parFileIO::Load
+
+    if (m_Device) m_Device->sub_468500(); // Some update?
+}
+
 void vehInput::Update()
 {
     // hook::Thunk<0x46B330>::Call<void>(this); // Call original
@@ -736,4 +753,19 @@ void vehInput::sub_46A7A0(float steer, float* gasbrake, float* brake, int* driva
 void vehInput::SomethingReplay()
 {   
     hook::Thunk<0x568460>::Call<void>(this);
+}
+
+void vehInput::sub_46A3A0(vehEntity* entity, const char* carName)
+{
+    hook::Thunk<0x46A3A0>::Call<void>(this, entity, carName);
+}
+
+void vehInput::sub_46A3F0(int playerId)
+{
+    hook::Thunk<0x46A3F0>::Call<void>(this, playerId);
+}
+
+void vehInput::sub_46A410(int playerId)
+{
+    hook::Thunk<0x46A410>::Call<void>(this, playerId);
 }

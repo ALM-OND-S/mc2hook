@@ -1,22 +1,14 @@
 #pragma once
+#include <age/vector/matrix34.h>
+
+class phArchetype;
 
 class phInst
 {
 public:
 	void* m_Vtable;
-	int dword_04;
+	phArchetype* m_Archetype;
 	int dword_08;
-	int dword_0C;
-	int dword_10;
-	int dword_14;
-	int dword_18;
-	int dword_1C;
-	int dword_20;
-	int dword_24;
-	int dword_28;
-	int dword_2C;
-	int dword_30;
-	int dword_34;
-	int dword_38;
-	int dword_3C;
+	int dword_0c;
+	Matrix34 m_Transform;
 };

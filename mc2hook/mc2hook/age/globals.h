@@ -1,4 +1,6 @@
 #pragma once
+#include <age/types.h>
+
 static const char* g_CityNames[] =
 {
     "Los Angeles",
@@ -69,6 +71,42 @@ static const char* g_VehicleNames[] =
     "LA Cop",
     "Paris Cop",
     "Tokyo Cop"
+};
+
+static const char* g_VehicleNamesDev[] =
+{
+    "vp_escort",
+    "vp_civica",
+    "vp_jetta",
+    "vp_integraa",
+    "vp_gto",
+    "vp_s2000",
+    "vp_cbr929a",
+    "vp_civicb",
+    "vp_rx7",
+    "vp_viper",
+    "vp_puma",
+    "vp_cosworth",
+    "vp_m5",
+    "vp_elise",
+    "vp_golfa",
+    "vp_ducati",
+    "vp_clio",
+    "vp_vanquish",
+    "vp_911",
+    "vp_lexus",
+    "vp_nissanz",
+    "vp_mr2",
+    "vp_supraa",
+    "vp_lancer",
+    "vp_yamaha",
+    "vp_suprab",
+    "vp_skylinea",
+    "vp_saleen",
+    "vp_slf450x",
+    "vp_cop_l",
+    "vp_pariscop",
+    "vp_tokyocop",
 };
 
 static const char* g_TODList[TOD_COUNT] =

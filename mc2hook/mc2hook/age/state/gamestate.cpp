@@ -11,7 +11,7 @@ void mcGameState::InitTime()
     hook::Thunk<0x402E10>::Call<void>(this); // Call original
 
     // General init for now
-    datTimeManager::InitPhysicsBaselineFPS();
+    datTimeManager::Init();
 }
 
 void mcGameState::EnterState(int state)

@@ -5,6 +5,7 @@
 #include <age/core/output.h>
 #include <age\string\string.h>
 #include <age\memory\memory.h>
+#include <age/data/timemgr.h>
 #include <direct.h>
 
 static int ZipFileSortFunc(const void* a, const void* b)
@@ -66,9 +67,16 @@ void zipInitHandler::zipMultiAutoInit(LPCSTR folder, LPCSTR filter)
 
 void zipInitHandler::zipInit()
 {
+    static bool speedrunMode = HookConfig::GetFloat("General", "SpeedrunMode", false);
+
     if (datArgParser::Get("archive"))
     {
         zipAutoInit(); // call into original
+    }
+    else if (speedrunMode)
+    {
+        zipMultiAutoInit("", "assets_p.dat");
+        zipMultiAutoInit("", "streams_pc.dat");
     }
     else if(!datArgParser::Get("unpacked"))
     {
