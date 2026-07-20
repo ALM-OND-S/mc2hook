@@ -11,6 +11,8 @@ public:
     static hook::Type<float> ElapsedTime;
     static hook::Type<float> PrevElapsedTime;
     static hook::Type<float> UnwarpedSeconds;
+
+    static bool EnableFPSFixes;
     static bool SpeedrunMode;
 
 public:

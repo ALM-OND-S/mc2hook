@@ -325,7 +325,7 @@ void vehGyro::Update()
             float leanTorqueScale = -((leanTargetAngle * m_Lean
                 + leanTorqueAxis.Dot(ics->m_AngularVelocity)
                 * m_LeanDamp * datTimeManager::InvSeconds
-                * datTimeManager::PhysicsSecondsScale) // FPS dependency fix
+                * datTimeManager::PhysicsSecondsScale) // [FIX] FPS dependency fix
                 * ics->m_AngInertia.Z);
 
             Vector3 leanTorqueVec = leanTorqueAxis * leanTorqueScale;
@@ -419,7 +419,7 @@ LABEL_112:
         * m_Wheelie
         - (wheelieTorqueAxis.Dot(ics->m_AngularVelocity))
         * datTimeManager::InvSeconds * 0.1f
-        * datTimeManager::PhysicsSecondsScale; // FPS dependency fix
+        * datTimeManager::PhysicsSecondsScale; // [FIX] FPS dependency fix
     
     float wheelieTorque = wheelieTorqueScale * ics->m_AngInertia.X;
     Vector3 wheelieTorqueVec = wheelieTorqueAxis * wheelieTorque;
@@ -572,7 +572,7 @@ LABEL_148:
                 + instParent->m_SomeInstParentTransform.m21 * ics->m_AngularVelocity.Y
                 + instParent->m_SomeInstParentTransform.m20 * ics->m_AngularVelocity.X;
 
-            airRollRate *= datTimeManager::PhysicsSecondsScale; // FPS dependency fix
+            airRollRate *= datTimeManager::PhysicsSecondsScale; // [FIX] FPS dependency fix
 
             float airRollTorque =
                 -(airClampedRoll * m_RollTorque

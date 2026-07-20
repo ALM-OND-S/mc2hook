@@ -119,7 +119,7 @@ void vehAero::Update2()
     if (speed > 15.0f)
     {
         // Force magnitude scales with speed squared
-        float downforceScale = speed * speed * ics->m_Mass * m_Down * -0.001f * datTimeManager::PhysicsSecondsScale; // Downforce FPS dependency fix
+        float downforceScale = speed * speed * ics->m_Mass * m_Down * -0.001f * datTimeManager::PhysicsSecondsScale; // [FIX] Downforce FPS dependency fix
 
         float downforceX = downforceScale * ics->m_WorldTransform.m10;
         float downforceY = downforceScale * ics->m_WorldTransform.m11;
@@ -152,7 +152,7 @@ void vehAero::Update2()
     // Drag
     if (speed > 10.0f)
     {
-        float dragScale = ics->m_Mass * this->dword_34 * speed * -0.001f * datTimeManager::PhysicsSecondsScale; // Drag force FPS dependency fix
+        float dragScale = ics->m_Mass * this->dword_34 * speed * -0.001f * datTimeManager::PhysicsSecondsScale; // [FIX] Drag force FPS dependency fix
 
         ics->m_Force.X += dragScale * ics->m_WorldVelocity.X;
         ics->m_Force.Y += dragScale * ics->m_WorldVelocity.Y;
