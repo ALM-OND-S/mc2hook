@@ -37,8 +37,11 @@ void ageEndFrame()
         char buffer[128];
         float fps = 1000.0f / Timer::s_FrameTime; // 1010.0f?
 
-        if (datTimeManager::EnableFPSFixes) sprintf(buffer, "%.0f %.0f %s", fps, datTimeManager::PhysicsBaselineFPS, GetMC2HookVersion());
-        else sprintf(buffer, "%.0f %s", fps, GetMC2HookVersion());
+        if (datTimeManager::EnableFPSFixes)
+            sprintf(buffer, "%.0f %.0f %s", fps, datTimeManager::PhysicsBaselineFPS, GetMC2HookVersion());
+        else
+            sprintf(buffer, "%.0f %s", fps, GetMC2HookVersion());
+
         gfxFont::DrawFont(gfxPipeline::m_iWidth - (8 * strlen(buffer) + 40), 24, buffer, -1);
     }
 
