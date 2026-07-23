@@ -11,4 +11,6 @@ public:
     static hook::Type<char[256]> g_RaceName;
     static hook::Type<int> g_CurrentCar;
     static hook::Type<int> g_CurrentCarColor;
+    static hook::Type<int> g_NumPlayers;
+    static hook::Type<int> g_MultiplayerTeamMode;
 };

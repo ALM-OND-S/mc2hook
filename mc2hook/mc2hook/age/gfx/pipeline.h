@@ -27,4 +27,5 @@ public:
 public:
     static void gfxWindowCreate(LPCSTR windowName);
     static LRESULT InputWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+    static void EndFrame();
 };

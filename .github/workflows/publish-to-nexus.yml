@@ -1,0 +1,43 @@
+name: Publish to Nexus Mods
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  upload-to-nexus:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release asset
+        id: download
+        uses: robinraju/release-downloader@v1.13
+        with:
+          tag: ${{ github.event.release.tag_name }}
+          fileName: '*.zip'
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare version and filename
+        run: |
+          # Get the downloaded filename
+          ASSET_FILENAME=$(echo '${{ steps.download.outputs.downloaded_files }}' | jq -r '.[0]' | xargs basename)
+
+          # Strip the 'v' prefix from tag name for version
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"  # Remove leading 'v' if present
+
+          # Store values for later steps
+          echo "ASSET_FILENAME=$ASSET_FILENAME" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Upload to Nexus Mods
+        uses: Nexus-Mods/upload-action@v1.0.0-beta.8
+        with:
+          api_key: ${{ secrets.NEXUS_MODS_API_KEY }}
+          file_id: ${{ secrets.NEXUS_MODS_FILE_GROUP }}
+          filename: ${{ env.ASSET_FILENAME }}
+          version: ${{ env.VERSION }}
+          display_name: mc2hook v${{ env.VERSION }}
+          description: ${{ github.event.release.body }}
+          archive_existing_version: true
+          primary_mod_manager_download: true

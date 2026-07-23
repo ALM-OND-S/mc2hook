@@ -1,4 +1,5 @@
 #pragma once
+#include <mc2hook\mc2hook.h>
 
 class phBound;
 
@@ -24,4 +25,5 @@ public:
 
 public:
     float sub_47B9D0();
+    void SetTypeFlag(int type, char flag);
 };

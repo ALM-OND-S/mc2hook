@@ -325,7 +325,7 @@ void vehGyro::Update()
             float leanTorqueScale = -((leanTargetAngle * m_Lean
                 + leanTorqueAxis.Dot(ics->m_AngularVelocity)
                 * m_LeanDamp * datTimeManager::InvSeconds
-                * datTimeManager::PhysicsSecondsScale) // FPS dependency fix
+                * datTimeManager::PhysicsSecondsScale) // [FIX] FPS dependency fix
                 * ics->m_AngInertia.Z);
 
             Vector3 leanTorqueVec = leanTorqueAxis * leanTorqueScale;
@@ -419,7 +419,7 @@ LABEL_112:
         * m_Wheelie
         - (wheelieTorqueAxis.Dot(ics->m_AngularVelocity))
         * datTimeManager::InvSeconds * 0.1f
-        * datTimeManager::PhysicsSecondsScale; // FPS dependency fix
+        * datTimeManager::PhysicsSecondsScale; // [FIX] FPS dependency fix
     
     float wheelieTorque = wheelieTorqueScale * ics->m_AngInertia.X;
     Vector3 wheelieTorqueVec = wheelieTorqueAxis * wheelieTorque;
@@ -572,7 +572,7 @@ LABEL_148:
                 + instParent->m_SomeInstParentTransform.m21 * ics->m_AngularVelocity.Y
                 + instParent->m_SomeInstParentTransform.m20 * ics->m_AngularVelocity.X;
 
-            airRollRate *= datTimeManager::PhysicsSecondsScale; // FPS dependency fix
+            airRollRate *= datTimeManager::PhysicsSecondsScale; // [FIX] FPS dependency fix
 
             float airRollTorque =
                 -(airClampedRoll * m_RollTorque
@@ -600,7 +600,7 @@ void vehGyro::ApplyScaledTorqueAndForce(const Vector3& torque, const Vector3& of
     ics->m_Force.Z += force.Z * mul;
 
     // Apply scaled torque
-    ics->m_Torque.X += torque.X * m_CarSim->dword_48.X;
-    ics->m_Torque.Y += torque.Y * m_CarSim->dword_48.Y;
-    ics->m_Torque.Z += torque.Z * m_CarSim->dword_48.Z;
+    ics->m_Torque.X += torque.X * m_CarSim->m_InertiaScale.X;
+    ics->m_Torque.Y += torque.Y * m_CarSim->m_InertiaScale.Y;
+    ics->m_Torque.Z += torque.Z * m_CarSim->m_InertiaScale.Z;
 }

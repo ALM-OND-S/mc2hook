@@ -4,10 +4,11 @@
 #include <age/physics/phinertia.h>
 #include <age/math/math.h>
 #include <age/data/timemgr.h>
+#include <age/vehicle/vehinput.h>
 
 void vehAero::Update()
 {
-    if (this->dword_3c && (*(unsigned char*)(this->dword_3c + 0x2A) & 1) != 0 && *(float*)(this->dword_3c + 0x20) < -0.5f)
+    if (this->m_BikeInput && (*(unsigned char*)(this->m_BikeInput + 0x2A) & 1) != 0 && *(float*)(this->m_BikeInput + 0x20) < -0.5f)
     {
         this->dword_34 = this->m_DragSlipstream;
         this->dword_34 += this->dword_48;
@@ -118,7 +119,7 @@ void vehAero::Update2()
     if (speed > 15.0f)
     {
         // Force magnitude scales with speed squared
-        float downforceScale = speed * speed * ics->m_Mass * m_Down * -0.001f * datTimeManager::PhysicsSecondsScale; // Downforce FPS dependency fix
+        float downforceScale = speed * speed * ics->m_Mass * m_Down * -0.001f * datTimeManager::PhysicsSecondsScale; // [FIX] Downforce FPS dependency fix
 
         float downforceX = downforceScale * ics->m_WorldTransform.m10;
         float downforceY = downforceScale * ics->m_WorldTransform.m11;
@@ -151,10 +152,15 @@ void vehAero::Update2()
     // Drag
     if (speed > 10.0f)
     {
-        float dragScale = ics->m_Mass * this->dword_34 * speed * -0.001f * datTimeManager::PhysicsSecondsScale; // Drag force FPS dependency fix
+        float dragScale = ics->m_Mass * this->dword_34 * speed * -0.001f * datTimeManager::PhysicsSecondsScale; // [FIX] Drag force FPS dependency fix
 
         ics->m_Force.X += dragScale * ics->m_WorldVelocity.X;
         ics->m_Force.Y += dragScale * ics->m_WorldVelocity.Y;
         ics->m_Force.Z += dragScale * ics->m_WorldVelocity.Z;
     }
+}
+
+void vehAero::sub_4E5450(vehCarSim* sim, vehInput* input)
+{
+    hook::Thunk<0x4E5450>::Call<void>(this, sim, input); // Call original
 }

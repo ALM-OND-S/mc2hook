@@ -3,6 +3,9 @@
 #include <handlers\handlers.h>
 #include <mc2hook\mc2hook_defs.h>
 
+#pragma comment(lib, "Version.lib")
+HMODULE g_ModuleHandle = nullptr;
+
 LPFNDIRECTINPUTCREATE lpDICreate;
 
 #if DIRECTINPUT_VERSION == 0x0700
@@ -60,6 +63,36 @@ bool GetHookProcAddress(HMODULE hModule, LPCSTR lpProcName, FARPROC* out)
     }
 };
 
+const char* GetMC2HookVersion()
+{
+    static char version[32] = "unknown";
+
+    if (!g_ModuleHandle) return version;
+
+    char path[MAX_PATH];
+    GetModuleFileNameA(g_ModuleHandle, path, MAX_PATH);
+
+    DWORD dummy;
+    DWORD size = GetFileVersionInfoSizeA(path, &dummy);
+
+    if (!size) return version;
+        
+    std::vector<char> data(size);
+
+    if (GetFileVersionInfoA(path, 0, size, data.data()))
+    {
+        VS_FIXEDFILEINFO* info = nullptr;
+        UINT len = 0;
+
+        if (VerQueryValueA(data.data(), "\\", (LPVOID*)&info, &len))
+        {
+            sprintf(version, "%u.%u.%u", HIWORD(info->dwFileVersionMS), LOWORD(info->dwFileVersionMS), HIWORD(info->dwFileVersionLS));
+        }
+    }
+
+    return version;
+}
+
 static void Initialize()
 {
     HookConfig::Init();
@@ -91,6 +124,8 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
+        g_ModuleHandle = hModule;
+
         printf("Initting %s", PRODUCT_NAME);
 
         if (CheckGameValid())

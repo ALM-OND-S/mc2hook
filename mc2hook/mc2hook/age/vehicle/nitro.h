@@ -1,5 +1,7 @@
 #pragma once
 
+class vehEntity;
+
 class vehNitro
 {
 public:
@@ -22,7 +24,13 @@ public:
 	int dword_40;
 
 public:
+	vehNitro()  { hook::Thunk<0x4D2080>::Call<void>(this); }
+	~vehNitro() { hook::Thunk<0x4D1EA0>::Call<void>(this); }
+
+public:
 	void sub_4D1F80();
 	bool sub_46A350();
 	void sub_4D1EE0();
+
+	void Init(int a2, vehEntity* entity, const char* carName);
 };

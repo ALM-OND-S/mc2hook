@@ -3,6 +3,7 @@
 
 class mcCar;
 class vehCarSim;
+//class vehEntity;
 
 class vehAutoMgr
 {
@@ -50,7 +51,9 @@ public:
 public:
     static hook::Type<vehAutoMgr*> Instance;
 public:
-    vehAutoMgr* GetInstance();
+    static vehAutoMgr* GetInstance();
     mcCar* GetCar() { return *m_Car; }
     vehCarSim* GetSim() { return *m_Sim; }
+
+    int AddEntry(mcCar* a2);
 };

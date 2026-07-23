@@ -1,5 +1,7 @@
 #pragma once
 
+class vehEntity;
+
 class mcCarSSTurbo
 {
 public:
@@ -44,7 +46,13 @@ public:
 	int dword_98;
 
 public:
+	mcCarSSTurbo()  { hook::Thunk<0x4D4430>::Call<void>(this); }
+	~mcCarSSTurbo() { hook::Thunk<0x4D4500>::Call<void>(this); }
+
+public:
 	void sub_4D4270();
 	bool sub_4D4230();
 	void sub_4D41F0();
+
+	void Init(int a2, vehEntity* entity, const char* carName);
 };

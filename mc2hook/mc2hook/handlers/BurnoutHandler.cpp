@@ -10,8 +10,6 @@ static float burnoutIncreaseSpeedCached = 0.0f;
 static float burnoutDecreaseSpeedCached = 0.0f;
 static float burnoutDamageAmountCached = 0.0f;
 
-static float physicsFixesBaselineFPS = 0.0f;
-
 static bool vehCarSimValuesCached = false;
 
 void BurnoutHandler::vehCarSimUpdate()

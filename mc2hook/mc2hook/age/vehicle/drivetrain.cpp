@@ -1,9 +1,6 @@
 #include "drivetrain.h"
-
 #include <age/vehicle/transmission.h>
 #include <age/data/timemgr.h>>
-
-#include <age/core/output.h> //
 
 void vehDrivetrain::Update() // TODO: Cleanup
 {

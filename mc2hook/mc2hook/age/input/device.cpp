@@ -47,3 +47,8 @@ bool ioDeviceWrapper::sub_467FA0()
 {
     return hook::Thunk<0x467FA0>::Call<bool>(this);
 }
+
+void ioDeviceWrapper::sub_468500()
+{
+    hook::Thunk<0x468500>::Call<void>(this); // Call original
+}
