@@ -1,4 +1,3 @@
-#include <mc2hook\mc2hook.h>
 #include "carsim.h"
 #include <age/math/math.h>
 

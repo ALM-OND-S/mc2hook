@@ -1,8 +1,9 @@
 #pragma once
+#include <age\memory\age_alloc_baseclass.h>
 
 class vehEntity;
 
-class mcCarSSTurbo
+class mcCarSSTurbo : public AGEAllocatedClass
 {
 public:
 	void* m_Vtable;

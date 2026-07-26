@@ -14,4 +14,7 @@ public:
     int dword_14;
     int dword_18;
     aiOpponentDesc* m_OpponentDescs;
+
+public:
+    void Destructor();
 };

@@ -30,6 +30,8 @@
 #include <age/vehicle/automgr.h>
 #include <age/vehicle/car.h>
 #include <age/ai/opponentmgr.h>
+#include <age/vehicle/entity.h>
+#include <age/mcgame/racebase.h>
 
 void REHandler::Install()
 {
@@ -409,21 +411,21 @@ void REHandler::Install()
             cb::call(0x614911),
         });
 
-    //InstallCallback("datReplay::datReplay_614770()", "datReplay::datReplay_614770()",
-    //    &datReplay::datReplay_614770, {
-    //        cb::call(0x404D69),
+    ////InstallCallback("datReplay::datReplay_614770()", "datReplay::datReplay_614770()",
+    ////    &datReplay::datReplay_614770, {
+    ////        cb::call(0x404D69),
+    ////    });
+
+    //// mcReplay
+    //InstallCallback("mcReplay::StartPlayback()", "mcReplay::StartPlayback()",
+    //    &mcReplay::StartPlayback, {
+    //        cb::call(0x4053BB),
     //    });
 
-    // mcReplay
-    InstallCallback("mcReplay::StartPlayback()", "mcReplay::StartPlayback()",
-        &mcReplay::StartPlayback, {
-            cb::call(0x4053BB),
-        });
-
-    InstallCallback("mcReplay::Update()", "mcReplay::Update()",
-        &mcReplay::Update, {
-            cb::call(0x40531B),
-        });
+    //InstallCallback("mcReplay::Update()", "mcReplay::Update()",
+    //    &mcReplay::Update, {
+    //        cb::call(0x40531B),
+    //    });
 
     // mcPlayerFactory / vehFactory
     InstallCallback("mcPlayerFactory::Create()", "mcPlayerFactory::Create()",
@@ -436,10 +438,9 @@ void REHandler::Install()
             cb::call(0x4B01E9),
         });
 
-    // TODO: vehFactory::Create
-
     // vehManager / vehAutoMgr
     InstallVTableHook("vehAutoMgr::AddEntry()", &vehAutoMgr::AddEntry, { 0x644684 });
+    InstallVTableHook("vehAutoMgr::DelEntry()", &vehAutoMgr::DelEntry, { 0x644688 });
 
     // mcCar
     InstallVTableHook("mcCar::Update()", &mcCar::Update, { 0x644980 });
@@ -448,5 +449,19 @@ void REHandler::Install()
     InstallCallback("aiOpponentManager::Init()", "aiOpponentManager::Init()",
         &aiOpponentManager::Init, {
             cb::call(0x40A1EC),
+        });
+
+    // vehEntity
+    InstallVTableHook("vehEntity::Delete()", &vehEntity::Delete, { 0x644958 });
+
+    // mcRaceBase
+    InstallCallback("mcRaceBase::Destructor()", "mcRaceBase::Destructor()",
+        &mcRaceBase::Destructor, {
+            cb::call(0x48A6F3),
+            cb::jmp(0x48B4EC),
+            cb::jmp(0x48F0DA),
+            cb::jmp(0x49098E),
+            cb::jmp(0x496251),
+            cb::jmp(0x496C16),
         });
 };

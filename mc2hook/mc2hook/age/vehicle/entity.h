@@ -2,8 +2,9 @@
 #include <mc2hook\mc2hook.h>
 #include <age/vehicle/car.h>
 #include <age/physics/phinst.h>
+#include <age\memory\age_alloc_baseclass.h>
 
-class vehEntity
+class vehEntity : public AGEAllocatedClass
 {
 public:
 	phInst m_PhysInst;
@@ -12,4 +13,8 @@ public:
 public:
 	vehEntity()  { hook::Thunk<0x4D1580>::Call<void>(this); }
 	~vehEntity() { hook::Thunk<0x4D1DA0>::Call<void>(this); }
+
+	void Delete(bool a2);
 };
+
+static_assert(sizeof(vehEntity) == 0x80, "vehEntity size mismatch");

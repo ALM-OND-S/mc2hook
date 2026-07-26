@@ -179,6 +179,8 @@
     <ClInclude Include="age\input\joystick.h" />
     <ClInclude Include="age\input\keyboard.h" />
     <ClInclude Include="age\input\mouse.h" />
+    <ClInclude Include="age\mcgame\ghost.h" />
+    <ClInclude Include="age\mcgame\ghostmgr.h" />
     <ClInclude Include="age\mcgame\layermgr.h" />
     <ClInclude Include="age\mcaudio\mcaudiomgr.h" />
     <ClInclude Include="age\mcgame\playermgr.h" />
@@ -342,12 +344,15 @@
     <ClCompile Include="age\input\joystick.cpp" />
     <ClCompile Include="age\input\keyboard.cpp" />
     <ClCompile Include="age\input\mouse.cpp" />
+    <ClCompile Include="age\mcgame\ghost.cpp" />
+    <ClCompile Include="age\mcgame\ghostmgr.cpp" />
     <ClCompile Include="age\mcgame\layermgr.cpp" />
     <ClCompile Include="age\mcaudio\mcaudiomgr.cpp" />
     <ClCompile Include="age\mcgame\playermgr.cpp" />
     <ClCompile Include="age\mcgame\mcconfig.cpp" />
     <ClCompile Include="age\mcgame\mcdata.cpp" />
     <ClCompile Include="age\mcfe\hub.cpp" />
+    <ClCompile Include="age\mcgame\racebase.cpp" />
     <ClCompile Include="age\mcgame\racemgr.cpp" />
     <ClCompile Include="age\mcnetwork\netmanager.cpp" />
     <ClCompile Include="age\math\math.cpp" />
@@ -384,6 +389,7 @@
     <ClCompile Include="age\vehicle\drivetrain.cpp" />
     <ClCompile Include="age\vehicle\engine.cpp" />
     <ClCompile Include="age\vehicle\carmodel.cpp" />
+    <ClCompile Include="age\vehicle\entity.cpp" />
     <ClCompile Include="age\vehicle\gyro.cpp" />
     <ClCompile Include="age\vehicle\nitro.cpp" />
     <ClCompile Include="age\vehicle\vehinput.cpp" />

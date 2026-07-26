@@ -1,5 +1,7 @@
 #pragma once
+#include <mc2hook/mc2hook.h>
 #include <age/vehicle/wheel.h>
+#include <age/memory/age_alloc_baseclass.h>
 
 class vehAero;
 class vehTransmission;
@@ -21,7 +23,8 @@ struct vehWheels
 	vehWheel m_Wheel_RR;
 };
 
-class vehCarSim {
+class vehCarSim : public AGEAllocatedClass
+{
 public:
 	void* m_Vtable;
 	int dword_04;

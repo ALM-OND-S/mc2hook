@@ -3,7 +3,6 @@
 
 class mcCar;
 class vehCarSim;
-//class vehEntity;
 
 class vehAutoMgr
 {
@@ -39,7 +38,7 @@ public:
     int dword_70;
     int m_NumDrivers;
     void* m_Driver;
-    int dword_7c;
+    int m_MaxEntities;
     int m_NumDamages;
     int dword_84;
     int m_NumAudios;
@@ -55,5 +54,6 @@ public:
     mcCar* GetCar() { return *m_Car; }
     vehCarSim* GetSim() { return *m_Sim; }
 
-    int AddEntry(mcCar* a2);
+    void AddEntry(mcCar* car);
+    void DelEntry(mcCar* car);
 };

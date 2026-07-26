@@ -1,6 +1,8 @@
 #pragma once
+#include <age\memory\age_alloc_baseclass.h>
 
-class carAIInfo {
+class carAIInfo : public AGEAllocatedClass
+{
 public:
 	void* m_Vtable;
 	float m_TurnConst;

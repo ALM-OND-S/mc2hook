@@ -1,5 +1,6 @@
 #pragma once
 #include <age/input/input.h>
+#include <age/memory/age_alloc_baseclass.h>
 
 class vehEntity;
 class vehCarSim;
@@ -8,7 +9,8 @@ class vehAudio;
 class vehDamage;
 class ioDeviceWrapper;
 
-class vehInput { // Rename to vehPlayerInput?
+class vehInput : public AGEAllocatedClass // Rename to vehPlayerInput?
+{
 public:
     void* m_Vtable;
     int dword_04;
