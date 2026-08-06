@@ -19,11 +19,15 @@ jobs:
 
       - name: Prepare version and filename
         run: |
+          # Get the downloaded filename
+          ASSET_FILENAME=$(echo '${{ steps.download.outputs.downloaded_files }}' | jq -r '.[0]' | xargs basename)
+          
           # Strip the 'v' prefix from tag name for version
           VERSION="${{ github.event.release.tag_name }}"
           VERSION="${VERSION#v}"  # Remove leading 'v' if present
 
-          # Store version for later step
+          # Store values for later step
+          echo "ASSET_FILENAME=$ASSET_FILENAME" >> $GITHUB_ENV
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Upload to Nexus Mods
@@ -32,7 +36,7 @@ jobs:
           api_key: ${{ secrets.NEXUS_MODS_API_KEY }}
           mod_id: ${{ vars.NEXUS_MODS_MOD_ID }}
           file_id: ${{ vars.NEXUS_MODS_FILE_GROUP }}
-          filename: mc2hook
+          filename: ${{ env.ASSET_FILENAME }}
           display_name: mc2hook
           version: ${{ env.VERSION }}
           changelog: ${{ github.event.release.body }}
