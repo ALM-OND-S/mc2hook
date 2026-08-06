@@ -4,7 +4,8 @@
 class vehEntity;
 class mcCar;
 
-class mcPlayerFactory {
+class mcPlayerFactory
+{
 public:
 	void* m_Vtable;
 	char m_CarName[64];
@@ -51,9 +52,9 @@ public:
 	void MakeEntity();
 	void MakeAIInput()       { hook::Thunk<0x4BF530>::Call<void>(this); } // 0x4BF530 //
 	void MakeSim();
-	void MakeModel()         { hook::Thunk<0x4BF490>::Call<void>(this); } // 0x4BF490
+	void MakeModel();
 	void MakeDamage()        { hook::Thunk<0x4BF580>::Call<void>(this); } // 0x4BF580 //
 	void MakeAudio()         { hook::Thunk<0x4BF5E0>::Call<void>(this); } // 0x4BF5E0
-	void MakeGyro()          { hook::Thunk<0x4BF720>::Call<void>(this); } // 0x4BF720
+	void MakeGyro();
 	void MakeDriver()        { hook::Thunk<0x4BF650>::Call<void>(this); } // 0x4BF650
 };

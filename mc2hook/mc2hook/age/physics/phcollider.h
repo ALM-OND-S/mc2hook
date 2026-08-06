@@ -30,3 +30,5 @@ public:
 public:
 	void ApplyLeanImpulse(float impulse);
 };
+
+static_assert(sizeof(phCollider) == 0x7C, "phCollider size mismatch");

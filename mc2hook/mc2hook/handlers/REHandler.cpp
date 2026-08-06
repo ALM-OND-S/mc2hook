@@ -441,6 +441,7 @@ void REHandler::Install()
     // vehManager / vehAutoMgr
     InstallVTableHook("vehAutoMgr::AddEntry()", &vehAutoMgr::AddEntry, { 0x644684 });
     InstallVTableHook("vehAutoMgr::DelEntry()", &vehAutoMgr::DelEntry, { 0x644688 });
+    InstallVTableHook("vehAutoMgr::Update()", &vehAutoMgr::Update, { 0x644690 });
 
     // mcCar
     InstallVTableHook("mcCar::Update()", &mcCar::Update, { 0x644980 });

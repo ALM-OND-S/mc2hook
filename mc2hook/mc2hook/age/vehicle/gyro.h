@@ -1,17 +1,19 @@
 #pragma once
 #include <mc2hook/mc2hook.h>
+#include <age\memory\age_alloc_baseclass.h>
 
 class vehCarSim;
 class vehDrivetrain;
 class vehInput;
 class Vector3;
 
-class vehGyro {
+class vehGyro : public AGEAllocatedClass
+{
 public:
 	static hook::Type<int> dword_6957C0; // Not sure what this is yet
 
 public:
-	void* vtable;
+	void* m_Vtable;
 	int dword_04;
 	int dword_08;
 	vehCarSim* m_CarSim;
@@ -50,6 +52,27 @@ public:
 	float m_TwoWheelDrag;
 
 public:
+	vehGyro()  { hook::Thunk<0x4DC010>::Call<void>(this); }
+	~vehGyro() { hook::Thunk<0x4DC010>::Call<void>(this); }
+
+	void Init(vehCarSim* sim, const char* carName);
 	void Update();
 	void ApplyScaledTorqueAndForce(const Vector3& torque, const Vector3& offset, float scale);
 };
+
+class vehBikeGyro : public vehGyro
+{
+public:
+	float m_LeanBikeLimit;
+	float m_LeanGasLimit;
+	float m_LeanBrakeLimit;
+	float m_LeanSkidLimit;
+
+	vehBikeGyro()  { hook::Thunk<0x4DD620>::Call<void>(this); }
+	~vehBikeGyro() { hook::Thunk<0x4DD6E0>::Call<void>(this); }
+
+	void Init(vehCarSim* sim, const char* carName);
+};
+
+static_assert(sizeof(vehGyro) == 0x94, "vehGyro size mismatch");
+static_assert(sizeof(vehBikeGyro) == 0xA4, "vehBikeGyro size mismatch");

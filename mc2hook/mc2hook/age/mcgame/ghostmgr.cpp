@@ -20,5 +20,11 @@ void mcGhostManager::SpawnGhost(const char* carName)
 
 void mcGhostManager::DestroyGhost()
 {
-    m_Ghost.Destroy(true);
+    m_Ghost.Destroy();// (true);
+}
+
+void mcGhostManager::Update()
+{
+    if (m_Ghost.m_Entity)
+        m_Ghost.Update();
 }

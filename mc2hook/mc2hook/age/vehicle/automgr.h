@@ -56,4 +56,6 @@ public:
 
     void AddEntry(mcCar* car);
     void DelEntry(mcCar* car);
+
+    void Update(); // vehManager
 };

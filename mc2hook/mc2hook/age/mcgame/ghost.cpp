@@ -1,26 +1,112 @@
 #include "ghost.h"
-#include <age/mcgame/factory.h>
+#include <mc2hook/mc2hook.h>
+#include <age/memory/memory.h>
+//#include <age/mcgame/factory.h>
 #include <age/vehicle/entity.h>
+#include <age/vehicle/carsim.h>
+#include <age/vehicle/carmodel.h>
+#include <age/vehicle/nitro.h>
+#include <age/vehicle/carSSTurbo.h>
+#include <age/vehicle/aiinfo.h>
+#include <age/data/parse.h>
+#include <age/physics/archetype.h>
+#include <age/data/args.h>
+#include <age/physics/phcollider.h>
+
+#include <age/core/output.h> //
 
 bool mcGhostCar::Spawn(const char* carName)
 {
-    // TODO: Check if it's possible to have a mcGhostFactory,
-    // creating only what's needed,
-    // and possibly having a custom Update in vehAutoMgr/vehManager.
+    //// TODO: Check if it's possible to have a mcGhostFactory,
+    //// creating only what's needed,
+    //// and possibly having a custom Update in vehAutoMgr/vehManager.
 
-    if (m_Entity)
-        return false;
+    //if (m_Entity)
+    //    return false;
 
-    vehFactory factory;
+    //vehFactory factory;
 
-    factory.Build(carName, 1, nullptr); // Setting idx to higher than 0 enables collisions again (when other AIs are present)
+    //factory.Build(carName, 1, nullptr); // Setting idx to higher than 0 enables collisions again (when other AIs are present)
 
-    m_Entity = factory.Create();
+    //m_Entity = factory.Create();
+
+    //return m_Entity != nullptr;
+
+    Destroy();
+
+    m_Entity = age_new vehEntity();
+
+    MakeSim(carName);
+    //MakeModel(carName);
 
     return m_Entity != nullptr;
 }
 
-void mcGhostCar::Destroy(bool a2)
+void mcGhostCar::MakeSim(const char* carName)
+{
+    vehCarSim* sim = age_new vehCarSim();
+
+    m_Entity->m_Car.m_CarSim = sim;
+
+    //sim->MakeCollider(carName, m_Entity);
+    //sim->MakeAero(carName);
+    //sim->MakeFluid(carName);
+    //sim->MakeTransmission(carName);
+    //sim->MakeEngine(carName);
+    //sim->MakeWheels(carName);
+    //sim->MakeDrivetrains(carName);
+    //sim->MakeAxles(carName);
+    //sim->MakeSuspensions(carName);
+
+    //sim->m_Nitro = age_new vehNitro();
+    //sim->m_Nitro->Init(-1, m_Entity, carName);
+
+    //sim->m_SSTurbo = age_new mcCarSSTurbo();
+    //sim->m_SSTurbo->Init(-1, m_Entity, carName);
+
+    //sim->m_AIInfo = age_new carAIInfo();
+
+    //sim->sub_569A80(carName); // Some Load
+    //sim->sub_575060(&datParser::dword_8600B0); // ?
+
+    //sim->field_B4 = 0x15; //
+    //sim->sub_4D2F60();
+
+    //phArchetype* archetype = m_Entity->m_PhysInst.m_Archetype;
+    //if (archetype)
+    //{
+    //    archetype->SetTypeFlag(64, 1);
+    //    archetype->SetTypeFlag(1024, 1);
+    //}
+
+    // TODO: Figure out this weird flag stuff
+    //uint16_t& flags = reinterpret_cast<uint16_t*>(&m_Entity->m_PhysInst.dword_08)[1];
+    //flags |= ((m_Idx * 0x10) + 0x10) | 8;
+}
+
+void mcGhostCar::MakeModel(const char* carName)
+{
+    vehModel* model = age_new vehModel();
+
+    datArgParser::Get("nohighlods");
+
+    bool isBike = (m_Entity->m_Car.m_CarSim->m_NumWheels == 2);
+
+    model->Init(carName, &m_Entity->m_Car.m_CarSim->m_Collider->m_SomeInstParent->m_SomeInstParentTransform, m_Entity->m_Car.m_CarSim, false, false, isBike);
+
+    // This makes car models appear in the world
+    hook::Thunk<0x5178A0>::Call<void>(&model->dword_0c);
+
+    m_Entity->m_Car.m_Model = model;
+}
+
+void mcGhostCar::Update()
+{
+    Printf("mcGhostCar::Update\n");
+    //hook::Thunk<0x4CA4D0>::Call<void>(&m_Entity->m_Car.m_Model); // vehModel::Update
+}
+
+void mcGhostCar::Destroy()//(bool a2)
 {
     if (!m_Entity) return;
 

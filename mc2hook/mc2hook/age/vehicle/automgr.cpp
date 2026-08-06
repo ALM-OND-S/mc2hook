@@ -1,4 +1,5 @@
 #include "automgr.h"
+#include <age/mcgame/ghostmgr.h>
 
 declfield(vehAutoMgr::Instance)(0x6C523C);
 
@@ -15,4 +16,11 @@ void vehAutoMgr::AddEntry(mcCar* car) // vehManager
 void vehAutoMgr::DelEntry(mcCar* car) // vehManager
 {
     hook::Thunk<0x4CEA00>::Call<void>(this, car);
+}
+
+void vehAutoMgr::Update() // vehManager
+{
+    hook::Thunk<0x4CEA70>::Call<void>(this); // Call original
+
+    //mcGhostManager::Instance.Update();
 }

@@ -11,5 +11,5 @@ public:
     void SpawnGhost(const char* carName);
     void DestroyGhost();
 
-    //void Update();
+    void Update();
 };

@@ -19,7 +19,7 @@ public:
 	vehAudio* m_Audio;
 	vehDamage* m_Damage;
 	void* m_Feedback;
-	void* m_MaybePhysBehavior;
+	void* m_Driver;
 	vehStuck* m_Stuck;
 	vehGyro* m_Gyro;
 	int dword_68;

@@ -12,7 +12,10 @@
 #include <age/vehicle/vehinput.h>
 #include <age/vehicle/carmodel.h>
 #include <age/memory/memory.h>
-#include <age/data/parse.h>
+#include <age/data/args.h>
+#include <age/physics/phcollider.h>
+#include <age/physics/ph_some_inst_parent.h>
+#include <age/vehicle/gyro.h>
 
 #include <age/core/output.h> //
 
@@ -20,7 +23,7 @@
 
 void mcPlayerFactory::Build(const char* carName, int idx, void* owner)
 {
-    hook::Thunk<0x46BDC0>::Call<void>(this, carName, idx, owner);
+    hook::Thunk<0x46BDC0>::Call<void>(this, carName, idx, owner); // Call original
 }
 
 vehEntity* mcPlayerFactory::Create()
@@ -103,13 +106,10 @@ void vehFactory::MakeEntity()
         m_Car = nullptr;
 }
 
-// TODO: Replace/check all 'new' calls with age_new, could be the secret sauce to crashes
-// Keep reversing Make functions
-// Investigate destruction of ai cars
-
-void vehFactory::MakeSim()
+void vehFactory::MakeSim() // TODO: Causes race loss bug when opponents drop in the water
 {
-    //hook::Thunk<0x4BF300>::Call<void>(this); // Call original
+    hook::Thunk<0x4BF300>::Call<void>(this); // Call original
+    return;    
 
     vehEntity* entity = GetEntity();
 
@@ -153,35 +153,52 @@ void vehFactory::MakeSim()
     flags |= ((m_Idx * 0x10) + 0x10) | 8;
 }
 
-//void vehFactory::MakeModel()
-//{
-//    vehEntity* entity = GetEntity();
-//
-//    vehModel* model = age_new vehModel();
-//
-//    // Parsed for its side effects (or to initialize a global flag)
-//    datArgParser::Get("nohighlods");
-//
-//    bool isBike = (entity->m_Car.m_CarSim->m_NumWheels == 2);
-//
-//    model->Init(
-//        m_CarName,
-//        &entity->m_Car.m_CarSim->m_Collider
-//        ->m_SomeInstParent
-//        ->m_SomeInstParentTransform,
-//        entity->m_Car.m_CarSim,
-//        false,
-//        false,
-//        isBike);
-//
-//    model->sub_5178A0();
-//
-//    entity->m_Car.m_Model = model;
-//}
+void vehFactory::MakeModel()
+{
+    //hook::Thunk<0x4BF490>::Call<void>(this); // Call original
+    
+    vehEntity* entity = GetEntity();
+    vehModel* model = age_new vehModel();
+
+    datArgParser::Get("nohighlods");
+
+    bool isBike = (entity->m_Car.m_CarSim->m_NumWheels == 2);
+
+    model->Init(m_CarName, &entity->m_Car.m_CarSim->m_Collider->m_SomeInstParent->m_SomeInstParentTransform, entity->m_Car.m_CarSim, false, false, isBike);
+
+    // This makes car models appear in the world
+    hook::Thunk<0x5178A0>::Call<void>(&model->dword_0c);
+
+    entity->m_Car.m_Model = model;
+}
+
+void vehFactory::MakeGyro()
+{
+    //hook::Thunk<0x4BF720>::Call<void>(this); // Call original
+
+    vehEntity* entity = GetEntity();
+
+    if (entity->m_Car.m_CarSim->m_NumWheels == 2)
+    {
+        vehBikeGyro* gyro = age_new vehBikeGyro();
+        gyro->Init(entity->m_Car.m_CarSim, m_CarName);
+        gyro->dword_18 = (gyro->dword_18 & 0xFFE6FFFF) | 0x180000;
+        gyro->m_Input = entity->m_Car.m_Input;
+        entity->m_Car.m_Gyro = gyro;
+    }
+    else
+    {
+        vehGyro* gyro = age_new vehGyro();
+        gyro->Init(entity->m_Car.m_CarSim, m_CarName);
+        gyro->dword_18 = (gyro->dword_18 & 0xFFE6FFFF) | 0x100000;
+        gyro->m_Input = entity->m_Car.m_Input;
+        entity->m_Car.m_Gyro = gyro;
+    }
+}
 
 void vehFactory::Build(const char* carName, int idx, void* owner)
 {
-    hook::Thunk<0x4BF290>::Call<void>(this, carName, idx, owner);
+    hook::Thunk<0x4BF290>::Call<void>(this, carName, idx, owner); // Call original
 }
 
 vehEntity* vehFactory::Create()

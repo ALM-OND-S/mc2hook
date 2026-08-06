@@ -16,6 +16,11 @@
 
 declfield(vehGyro::dword_6957C0)(0x6957C0);
 
+void vehGyro::Init(vehCarSim* sim, const char* carName)
+{
+    hook::Thunk<0x4DC0E0>::Call<void>(this, sim, carName); // Call original
+}
+
 void vehGyro::Update()
 {
     // Wheel ptrs
@@ -603,4 +608,11 @@ void vehGyro::ApplyScaledTorqueAndForce(const Vector3& torque, const Vector3& of
     ics->m_Torque.X += torque.X * m_CarSim->m_InertiaScale.X;
     ics->m_Torque.Y += torque.Y * m_CarSim->m_InertiaScale.Y;
     ics->m_Torque.Z += torque.Z * m_CarSim->m_InertiaScale.Z;
+}
+
+// vehBikeGyro
+
+void vehBikeGyro::Init(vehCarSim* sim, const char* carName)
+{
+    hook::Thunk<0x4DD6F0>::Call<void>(this, sim, carName); // Call original
 }
