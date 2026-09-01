@@ -18,7 +18,6 @@
 #include <handlers/ReflectionFidelityHandler.h>
 #include <handlers/OnlineBangersHandler.h>
 #include <handlers/FreecamHandler.h>
-#include <handlers/MaxVelocityHandler.h>
 #include <handlers/AddressPrinterHandler.h>
 #include <handlers/ControllerScrollingFixHandler.h>
 #include <handlers/CityModelLimitHandler.h>
@@ -50,7 +49,6 @@ static void InstallHandlersPostEngineInit()
     InstallHandler<SteeringSmootherHandler>("Smooth Steering");
     InstallHandler<BurnoutHandler>("Burnout Handler");
     InstallHandler<PathHandler>("Path Handler");
-    InstallHandler<MaxVelocityHandler>("Max Velocity Handler");
     InstallHandler<AddressPrinterHandler>("Address Printer Handler");
     InstallHandler<TrafficDistanceHandler>("Traffic Distance Handler");
 

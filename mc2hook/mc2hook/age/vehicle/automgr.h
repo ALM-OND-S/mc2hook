@@ -2,7 +2,7 @@
 #include <mc2hook\mc2hook.h>
 
 class mcCar;
-class vehCarSim;
+class mcCarSim;
 
 class vehAutoMgr
 {
@@ -11,7 +11,7 @@ public:
     int m_NumCars;
     mcCar** m_Car;
     int m_NumSims;
-    vehCarSim** m_Sim;
+    mcCarSim** m_Sim;
     int m_NumEngines;
     void* m_Engine;
     int m_NumAeros;
@@ -52,7 +52,7 @@ public:
 public:
     static vehAutoMgr* GetInstance();
     mcCar* GetCar() { return *m_Car; }
-    vehCarSim* GetSim() { return *m_Sim; }
+    mcCarSim* GetSim() { return *m_Sim; }
 
     void AddEntry(mcCar* car);
     void DelEntry(mcCar* car);

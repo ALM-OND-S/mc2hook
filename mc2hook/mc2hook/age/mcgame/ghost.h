@@ -2,7 +2,7 @@
 
 class vehEntity;
 //class vehInput;
-//class vehCarSim;
+//class mcCarSim;
 
 class mcGhostCar
 {
@@ -18,5 +18,5 @@ public:
     void MakeModel(const char* carName);
 
     //vehInput* GetInput();
-    //vehCarSim* GetSim();
+    //mcCarSim* GetSim();
 };

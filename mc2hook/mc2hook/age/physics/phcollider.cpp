@@ -1,6 +1,8 @@
 #include "phcollider.h"
 #include <age/physics/phinertia.h>
 
+declfield(phCollider::SomeVtable)(0x6508DC);
+
 void phCollider::ApplyLeanImpulse(float impulse)
 {
     if (!m_ICS) return;
@@ -16,4 +18,9 @@ void phCollider::ApplyLeanImpulse(float impulse)
     //const Matrix34& transform = m_ICS->m_WorldTransform;
 
     //m_ICS->m_Torque += transform.GetRow(2) * torqueMag;
+}
+
+void phCollider::Init(vehEntity* entity, phInertialCS* ics, int a3)
+{
+    return hook::Thunk<0x591C60>::Call<void>(this, entity, ics, a3); // Call original
 }

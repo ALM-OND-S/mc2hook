@@ -4,6 +4,6 @@
 class BurnoutHandler
 {
 public:
-    void vehCarSimUpdate();
+    void mcCarSimUpdate();
     static void Install();
 };

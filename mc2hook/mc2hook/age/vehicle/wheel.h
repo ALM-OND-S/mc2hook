@@ -9,7 +9,7 @@ static constexpr float flt_673E54 = 0.25f;
 static constexpr float LRelaxCoef = 0.1f;
 static constexpr float SlidingThreshold = 0.5f;
 
-class vehCarSim;
+class mcCarSim;
 class phInertialCS;
 class phSurface;
 class phIntersection;
@@ -22,7 +22,7 @@ public:
 
 public:
 	void* m_Vtable;
-	vehCarSim* m_CarSim;
+	mcCarSim* m_CarSim;
 	phInertialCS* m_ICS;
 	Matrix34 m_GlobalMatrixWheelCenter;
 	float m_TireDispLimitLat;

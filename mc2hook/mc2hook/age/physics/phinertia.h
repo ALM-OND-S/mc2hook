@@ -1,7 +1,10 @@
 #pragma once
+#include <mc2hook/mc2hook.h>
+#include <age/memory/age_alloc_baseclass.h>
 #include <age/vector/matrix34.h>
 
-class phInertialCS {
+class phInertialCS : public AGEAllocatedClass
+{
 public:
 	void* m_Vtable;
 	float m_Mass;
@@ -67,6 +70,9 @@ public:
 	int dword_1a8;
 
 public:
+	phInertialCS()  { hook::Thunk<0x595E40>::Call<void>(this); }
+	~phInertialCS() { hook::Thunk<0x5946F0>::Call<void>(this); }	
+
 	void ApplyContactForce(Vector3* someForce,Vector3* somePos, Matrix34* a4, Vector3* a5);
 	void AddForce(Vector3* a2, Vector3* a3);
 	void AccumulateForce(const Vector3& force);
@@ -77,6 +83,9 @@ public:
 	void ApplyPush(Vector3* a2, Vector3* a3, int a4);
 	void GetLocalVelocity(Vector3* position, Vector3* velocity, int a4); // Get velocity at point
 	void GetLocalFilteredVelocity2(Vector3* out, Vector3* vel);
-
 	float CalcCollisionNoFriction(Vector3* a2, float a3, Vector3* a4);
+	void InitBoxMass(float mass, float inertiaBoxX, float inertiaBoxY, float inertiaBoxZ);
+	void Zero();
 };
+
+static_assert(sizeof(phInertialCS) == 0x1AC, "phInertialCS size mismatch");

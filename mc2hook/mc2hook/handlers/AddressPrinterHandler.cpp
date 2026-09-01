@@ -10,8 +10,8 @@
 // phInst:
 // vehAero: 0x4E5480, 0x646710
 // vehAxle:
-// vehCarSim: 0x56A3E0, 0x644A74 Maybe
-// vehDamage: 0x4CFAF0, 0x6446D4
+// mcCarSim: 0x56A3E0, 0x644A74 Maybe
+// mcCarDamage: 0x4CFAF0, 0x6446D4
 // vehDrivetrain: 0x573CB0, 0x56C696 (cb)
 // vehEngine: 0x56FBD0, 0x650F9C
 // vehFluid:

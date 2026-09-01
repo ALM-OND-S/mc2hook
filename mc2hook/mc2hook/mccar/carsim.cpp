@@ -1,18 +1,110 @@
 #include "carsim.h"
 #include <age/math/math.h>
-
+#include <age/vehicle/entity.h>
 #include <age/vehicle/transmission.h>
 #include <age/vehicle/aero.h>
 #include <age/vehicle/wheel.h>
 #include <age/physics/phcollider.h>
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/carSSTurbo.h>
-#include <age/vehicle/damage.h>
+#include <veh_base/damage.h>
 #include <age/physics/archetype.h>
+#include <age/memory/memory.h>
+#include <age/physics/bound.h>
+#include <age/core/output.h>
+#include <age/physics/archmgr.h>
+#include <age/physics/phlevel.h>
+
+void mcCarSim::MakeCollider(const char* carName, vehEntity* entity)
+{
+    //hook::Thunk<0x4D2440>::Call<void>(this, carName, entity); // Call original
+
+    MakeColliderChassis(carName, entity);
+
+    entity->SetPhysFlag(4, true);
+
+    phArchetype* archetype = entity->m_PhysInst.m_Archetype;
+
+    archetype->SetTypeFlag(0x8000, true);
+    archetype->SetTypeFlag(0x20000, true);
+    archetype->SetTypeFlag(0x4000, true);
+}
+
+void mcCarSim::MakeColliderChassis(const char* carName, vehEntity* entity)
+{
+    //hook::Thunk<0x569010>::Call<void>(this, carName, entity); // Call original
+
+    // Create collider
+    m_Collider = age_new phCollider();
+
+    if (m_Collider)
+    {
+        m_Collider->m_Vtable = &phCollider::SomeVtable;
+        m_Collider->m_CarSim = this;
+    }
+
+    // Load vehicle bounds
+    char boundName[64];
+    sprintf(boundName, "%s_bound", carName);
+
+    phBound* bound = phBound::Load(boundName);
+
+    if (bound)
+    {
+        m_Collider->m_Bound = bound;
+        m_Size.X = bound->dword_14 - bound->dword_08;
+        m_Size.Y = bound->dword_18 - bound->dword_0c;
+        m_Size.Z = bound->dword_1c - bound->dword_10;
+        m_Size.Y = bound->dword_18;
+    }
+    else Errorf("vehChassis::MakeCollider(): File %s not found", boundName);
+
+    // Default inertia box
+    if (m_InertiaBox.X == 0.0f && m_InertiaBox.Y == 0.0f && m_InertiaBox.Z == 0.0f)
+    {
+        m_InertiaBox = m_Size * 1.25f;
+        m_InertiaScale = Vector3(1.25f, 1.25f, 1.25f);
+    }
+
+    // Create ICS
+    phInertialCS* ics = age_new phInertialCS();
+
+    ics->m_MaxAngVelocity = Vector3(6.2831855f, 6.2831855f, 6.2831855f); // 2PI
+    ics->m_MaxVelocity = 111.75f;
+
+    // Read max velocity from .ini
+    bool speedrunMode = HookConfig::GetBool("General", "SpeedrunMode", false);
+    float maxVelocity = HookConfig::GetFloat("Physics", "MaxVelocity", 111.75 * 2.237); // In mph format
+    if (!speedrunMode) ics->m_MaxVelocity = maxVelocity / 2.237; // mph to ms
+
+    ics->InitBoxMass(m_Mass, m_InertiaBox.X, m_InertiaBox.Y, m_InertiaBox.Z);
+    ics->Zero();
+
+    m_Collider->m_ICS = ics;
+
+    // Create physics archetype
+    if (!phArchetypeMgr::Instance) phArchetypeMgr::CreateInstance(0x190);
+
+    char s[60];
+    phArchetype* archetype = phArchetypeMgr::Instance->RegisterArchetype(bound, s, false, 1, phArchetype::dword_674060);
+    
+    archetype->SetMass(ics->m_Mass);
+    archetype->SetAngInertia(ics->m_AngInertia);
+
+    archetype->SetTypeFlag(64, 1);
+
+    entity->m_PhysInst.SetArchetype(archetype);
+    entity->m_PhysInst.m_Transform = Matrix34::I;
+
+    m_Collider->Init(entity, ics, 0);
+    
+    // Add collider to physics level
+    if (phLevel::Instance) phLevel::Instance->AddActiveObject(m_Collider, false);
+}
 
 // WIP
 /*
-void vehCarSim::UpdateControls()
+void mcCarSim::UpdateControls()
 {
     vehDrivetrain* m_Drivetrain; // eax
     int dword_1b8; // eax
@@ -70,7 +162,7 @@ void vehCarSim::UpdateControls()
     double Z; // st7
     int v58; // edi
     int v59; // ebp
-    vehDamage* m_Damage; // ecx
+    mcCarDamage* m_Damage; // ecx
     double v61; // st7
     int v62; // edi
     double m_BurnoutValue; // st7
@@ -118,7 +210,7 @@ void vehCarSim::UpdateControls()
     vehWheel* wheelFR = m_Wheels[2];
     vehWheel* wheelRR = m_Wheels[3];
 
-    v94 = OnGround(); //((int(__usercall*)@<eax>(vehCarSim * @<ecx>, double@<st0>))this->vtable->vehCarSim_OnGround)(this, a2);                                  // int vehCarSim_OnGround;
+    v94 = OnGround(); //((int(__usercall*)@<eax>(mcCarSim * @<ecx>, double@<st0>))this->vtable->mcCarSim_OnGround)(this, a2);                                  // int mcCarSim_OnGround;
     m_Drivetrain = this->m_Drivetrain;
     if (m_Drivetrain->m_NumWheels)
         this->dword_154 = -(m_Drivetrain->m_WheelRL->m_Radius * m_Drivetrain->m_SomeRPS);
@@ -550,14 +642,14 @@ void vehCarSim::UpdateControls()
                 v51 = wheelRL->m_LocalOffset.Z;
             a2a.Z = v51 * 0.75;
             a2a.Y = 0.0;
-            vehCarSim::SetCenterOfMass(this, &a2a);
+            mcCarSim::SetCenterOfMass(this, &a2a);
             v52 = 0;
             if (this->m_NumWheels > 0)
             {
                 v53 = 0;
                 do
                 {
-                    vehWheel::ComputeConstants((vehWheel*)((char*)&this->m_WheelsStruct->m_Wheel_FL + v53));
+                    vehWheel::ComputeConstants((vehWheel*)((char*)&this->m_Wheels->m_Wheel_FL + v53));
                     ++v52;
                     v53 += 0x1D4;
                 } while (v52 < this->m_NumWheels);
@@ -593,57 +685,31 @@ void vehCarSim::UpdateControls()
     }
     if (this->m_Aero->dword_04 < 1.0 || (v82 = this->dword_1b8, v82 == 4) || v82 == 2)
     {
-        vehCarSim::SetFrictionHandling(this, this->dword_15c);
+        mcCarSim::SetFrictionHandling(this, this->dword_15c);
         this->m_Steer = steering;
     }
     else
     {
         if (SLOBYTE(this->dword_1c8) >= 0)
-            vehCarSim::SetFrictionHandling(this, this->dword_160);
+            mcCarSim::SetFrictionHandling(this, this->dword_160);
         else
-            vehCarSim::SetFrictionHandling(this, 10.0);
+            mcCarSim::SetFrictionHandling(this, 10.0);
         this->m_Steer = steering;
     }
 }
 */
 
-int vehCarSim::OnGround()
-{
-    //return hook::Thunk<0x56A000>::Call<int>(this); // Call original
-
-    int numWheelsOnGround = 0;
-
-    for (int i = 0; i < m_NumWheels; i++)
-    {
-        if (m_Wheels[i]->m_OnGround)
-            numWheelsOnGround++;
-    }
-    return numWheelsOnGround;
-}
-
-int vehCarSim::BottomedOut()
-{
-    int numWheelsBottomedOut = 0;
-
-    for (int i = 0; i < m_NumWheels; i++)
-    {
-        if (m_Wheels[i]->m_BottomedOut)
-            numWheelsBottomedOut++;
-    }
-    return numWheelsBottomedOut;
-}
-
-void vehCarSim::SetDrivable(int a2)
+void mcCarSim::SetTransDirection(int a2)
 {
     hook::Thunk<0x4D2A50>::Call<void>(this, a2); // Call original
 }
 
-void vehCarSim::SetCenterOfMass(const Vector3& cg)
+void mcCarSim::SetCenterOfMass(const Vector3& cg)
 {
     this->m_CenterOfMass = cg;
 }
 
-void vehCarSim::SetFrictionHandling(float friction)
+void mcCarSim::SetFrictionHandling(float friction)
 {
     for (int i = 0; i < m_NumWheels; i++)
     {
@@ -651,29 +717,29 @@ void vehCarSim::SetFrictionHandling(float friction)
     }
 }
 
-void vehCarSim::sub_4D2F60()
+void mcCarSim::sub_4D2F60()
 {
     hook::Thunk<0x4D2F60>::Call<float>(this); // Call original
 }
 
-float vehCarSim::sub_4D2860(float a2) // Compute something
+float mcCarSim::sub_4D2860(float a2) // Compute something
 {
     return hook::Thunk<0x4D2860>::Call<float>(this, a2); // Call original
 }
 
-void vehCarSim::sub_569A80(const char* carName)
+void mcCarSim::sub_569A80(const char* carName)
 {
     hook::Thunk<0x569A80>::Call<void>(this, carName); // Call original
 }
 
-void vehCarSim::sub_575060(void* a2)
+void mcCarSim::sub_575060(void* a2)
 {
     hook::Thunk<0x575060>::Call<void>(this, a2); // Call original
 }
 
 // WIP
 /*
-void vehCarSim::UpdateControlsComp()
+void mcCarSim::UpdateControlsComp()
 {
     static bool toggle = false;
 
@@ -683,7 +749,7 @@ void vehCarSim::UpdateControlsComp()
 
         if (toggle == false)
         {
-            Printf("vehCarSim::UpdateControls : CALLING ORIGINAL\n");
+            Printf("mcCarSim::UpdateControls : CALLING ORIGINAL\n");
             toggle = !toggle;
         }
     }
@@ -693,7 +759,7 @@ void vehCarSim::UpdateControlsComp()
 
         if (toggle == true)
         {
-            Printf("vehCarSim::UpdateControls : CALLING REWRITE\n");
+            Printf("mcCarSim::UpdateControls : CALLING REWRITE\n");
             toggle = !toggle;
         }
     }

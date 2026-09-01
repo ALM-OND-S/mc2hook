@@ -10,18 +10,18 @@ static float burnoutIncreaseSpeedCached = 0.0f;
 static float burnoutDecreaseSpeedCached = 0.0f;
 static float burnoutDamageAmountCached = 0.0f;
 
-static bool vehCarSimValuesCached = false;
+static bool mcCarSimValuesCached = false;
 
-void BurnoutHandler::vehCarSimUpdate()
+void BurnoutHandler::mcCarSimUpdate()
 {
     hook::Thunk<0x4D3290>::Call<void>(this); // Call original
 
-    if (vehCarSimValuesCached == false)
+    if (mcCarSimValuesCached == false)
     {   
         burnoutIncreaseSpeedCached = *getPtr<float>(this, 0x190);
         burnoutDecreaseSpeedCached = *getPtr<float>(this, 0x194);
         burnoutDamageAmountCached = *getPtr<float>(this, 0x198);
-        vehCarSimValuesCached = true;
+        mcCarSimValuesCached = true;
     }
 
     burnoutIncreaseSpeed = burnoutIncreaseSpeedCached * datTimeManager::PhysicsSecondsScale;
@@ -35,5 +35,5 @@ void BurnoutHandler::vehCarSimUpdate()
 
 void BurnoutHandler::Install()
 {
-    InstallVTableHook("vehCarSim Some Update", &vehCarSimUpdate, { 0x644A6C });
+    InstallVTableHook("mcCarSim Some Update", &mcCarSimUpdate, { 0x644A6C });
 }

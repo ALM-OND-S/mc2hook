@@ -2,7 +2,7 @@
 #include <mc2hook/mc2hook.h>
 #include <age\memory\age_alloc_baseclass.h>
 
-class vehCarSim;
+class mcCarSim;
 class vehDrivetrain;
 class vehInput;
 class Vector3;
@@ -16,7 +16,7 @@ public:
 	void* m_Vtable;
 	int dword_04;
 	int dword_08;
-	vehCarSim* m_CarSim;
+	mcCarSim* m_CarSim;
 	vehDrivetrain* m_Drivetrain;
 	int dword_14;
 	int dword_18;
@@ -55,7 +55,7 @@ public:
 	vehGyro()  { hook::Thunk<0x4DC010>::Call<void>(this); }
 	~vehGyro() { hook::Thunk<0x4DC010>::Call<void>(this); }
 
-	void Init(vehCarSim* sim, const char* carName);
+	void Init(mcCarSim* sim, const char* carName);
 	void Update();
 	void ApplyScaledTorqueAndForce(const Vector3& torque, const Vector3& offset, float scale);
 };
@@ -71,7 +71,7 @@ public:
 	vehBikeGyro()  { hook::Thunk<0x4DD620>::Call<void>(this); }
 	~vehBikeGyro() { hook::Thunk<0x4DD6E0>::Call<void>(this); }
 
-	void Init(vehCarSim* sim, const char* carName);
+	void Init(mcCarSim* sim, const char* carName);
 };
 
 static_assert(sizeof(vehGyro) == 0x94, "vehGyro size mismatch");

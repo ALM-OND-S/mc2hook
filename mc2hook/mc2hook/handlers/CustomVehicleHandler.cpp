@@ -13,7 +13,6 @@
 //#include <string.h>
 
 // DEFINES
-const int NUM_NEW_VEHICLE_SLOTS = 256;
 const int NUM_DYN_VEHICLES_LIMIT = 232; // Gives 200 custom slots. Anything over 255 is not possible.
 
 // Original vehicles data
@@ -26,7 +25,7 @@ static char* ORIG_VEHICLE_BASENAMES[] = {"vp_escort", "vp_civica", "vp_jetta", "
 hook::Type<char* [32]> MC2_Vehicle_Basenames = 0x6631F0; // Original vehicle name memory
 
 // New vehicle name storage
-static char* VEHICLE_BASENAMES_DYN[NUM_NEW_VEHICLE_SLOTS];
+char* VEHICLE_BASENAMES_DYN[NUM_NEW_VEHICLE_SLOTS];
 static int NUM_DYN_VEHICLES = 0;
 static int NumCustomVehicles = 0;
 
@@ -168,6 +167,19 @@ int CustomVehicleHandler::netmanager_GetVarHook()
 
 void CustomVehicleHandler::Install()
 {
+    // Network related
+    InstallCallback("CustomVehicleHandler (14)", "Custom vehicle test: Hook vehicle var get",
+        &netmanager_GetVarHook, {
+            cb::call(0x4087D9), // join request packet 
+            cb::call(0x436719),
+            cb::call(0x437005),
+            cb::call(0x43EEEA)
+        }
+    );
+    
+    // .ini toggle
+    if (!HookConfig::GetBool("Experimental", "AddonVehicles", false)) return;
+    
     // mcUiAsyncIo related
    InstallCallback("CustomVehicleHandler (1)", "Custom vehicle test: Override IsVehicleLoaded",
        &mcUiAsyncIo::IsVehicleLoaded, {
@@ -305,16 +317,6 @@ void CustomVehicleHandler::Install()
    );
 
    mem::write(0x47E15A + 1, sizeof(mcPauseMenu_new));
-
-   // Network related
-   InstallCallback("CustomVehicleHandler (14)", "Custom vehicle test: Hook vehicle var get",
-   &netmanager_GetVarHook, {
-       cb::call(0x4087D9), // join request packet 
-       cb::call(0x436719),
-       cb::call(0x437005),
-       cb::call(0x43EEEA)
-   }
-   );
 
    // new asyncio size
    mem::write(0x41630F + 1, sizeof(mcUiAsyncIo));

@@ -1,6 +1,6 @@
 #include "gyro.h"
 #include <age/vehicle/wheel.h>
-#include <age/vehicle/carsim.h>
+#include <mccar/carsim.h>
 #include <age/data/timemgr.h>
 #include <age/math/math.h>
 #include <age/vehicle/vehinput.h>
@@ -10,13 +10,14 @@
 #include <age/vehicle/drivetrain.h>
 #include <age/vehicle/engine.h>
 #include <age/vehicle/transmission.h>
+#include <age/types.h>
 
 #include "dinput.h"
 #include <age/core/output.h>
 
 declfield(vehGyro::dword_6957C0)(0x6957C0);
 
-void vehGyro::Init(vehCarSim* sim, const char* carName)
+void vehGyro::Init(mcCarSim* sim, const char* carName)
 {
     hook::Thunk<0x4DC0E0>::Call<void>(this, sim, carName); // Call original
 }
@@ -24,10 +25,10 @@ void vehGyro::Init(vehCarSim* sim, const char* carName)
 void vehGyro::Update()
 {
     // Wheel ptrs
-    vehWheel* wheel_FL = m_CarSim->m_Wheels[0];
-    vehWheel* wheel_RL = m_CarSim->m_Wheels[1];
-    vehWheel* wheel_FR = m_CarSim->m_Wheels[2];
-    vehWheel* wheel_RR = m_CarSim->m_Wheels[3];
+    vehWheel* wheel_FL = m_CarSim->m_Wheels[FL];
+    vehWheel* wheel_RL = m_CarSim->m_Wheels[RL];
+    vehWheel* wheel_FR = m_CarSim->m_Wheels[FR];
+    vehWheel* wheel_RR = m_CarSim->m_Wheels[RR];
 
     // Wheel contact positions
     Vector3 FLpos = wheel_FL->m_ContactMatrix.GetRow(3);
@@ -90,7 +91,7 @@ void vehGyro::Update()
                 Vector3 handbrakeTorqueOrigin;
                 if (wheel_RR)
                     handbrakeTorqueOrigin.Midpoint(wheel_RL->m_ContactMatrix.GetRow(3),
-                                                   wheel_RR->m_ContactMatrix.GetRow(3));
+                        wheel_RR->m_ContactMatrix.GetRow(3));
                 else
                     handbrakeTorqueOrigin = wheel_RL->m_ContactMatrix.GetRow(3);
 
@@ -115,22 +116,22 @@ void vehGyro::Update()
                 * burnout;
 
             // Pick the driven axle wheels
-            vehWheel* wA = isRWD ? m_CarSim->m_Wheels[1] : m_CarSim->m_Wheels[0];
-            vehWheel* wB = isRWD ? m_CarSim->m_Wheels[3] : m_CarSim->m_Wheels[2];
+            vehWheel* wA = isRWD ? m_CarSim->m_Wheels[RL] : m_CarSim->m_Wheels[FL];
+            vehWheel* wB = isRWD ? m_CarSim->m_Wheels[RR] : m_CarSim->m_Wheels[FR];
 
             // FWD gets a larger scale
             if (!isRWD) burnoutTurnTorqueScale *= 2.0f;
 
             Vector3 burnoutTurnTorqueAxis;
             burnoutTurnTorqueAxis.Midpoint(wA->m_ContactMatrix.GetRow(1),
-                                           wB->m_ContactMatrix.GetRow(1));
+                wB->m_ContactMatrix.GetRow(1));
 
             Vector3 burnoutTurnTorqueOrigin;
             burnoutTurnTorqueOrigin.Midpoint(wA->m_ContactMatrix.GetRow(3),
-                                             wB->m_ContactMatrix.GetRow(3));
+                wB->m_ContactMatrix.GetRow(3));
 
             float burnoutTurnTorque = -(burnoutTurnTorqueScale * ics->m_AngInertia.Y * m_Drift);
-            
+
             Vector3 burnoutTurnTorqueVec = burnoutTurnTorqueAxis * burnoutTurnTorque;
             Vector3 burnoutTurnOffset = burnoutTurnTorqueOrigin - worldPos;
 
@@ -185,7 +186,7 @@ void vehGyro::Update()
                     m_DriftThrust *
                     dword_44 *
                     m_CarSim->m_Throttle *
-                    m_CarSim->m_Drivetrain->m_Wheels[0]->m_SurfaceFriction); // m_WheelRL
+                    m_CarSim->m_Drivetrain->m_Wheels[FL]->m_SurfaceFriction);
 
             Vector3 driftForce = ics->m_WorldTransform.GetRow(2) * driftForceScale;
 
@@ -425,7 +426,7 @@ LABEL_112:
         - (wheelieTorqueAxis.Dot(ics->m_AngularVelocity))
         * datTimeManager::InvSeconds * 0.1f
         * datTimeManager::PhysicsSecondsScale; // [FIX] FPS dependency fix
-    
+
     float wheelieTorque = wheelieTorqueScale * ics->m_AngInertia.X;
     Vector3 wheelieTorqueVec = wheelieTorqueAxis * wheelieTorque;
 
@@ -460,8 +461,7 @@ LABEL_118:
     if (spinAssist && brake > 0.0f)
     {
         float steerScale = m_CarSim->m_Steer;
-        if (absForwardSpeed < 25.0f)
-            steerScale *= absForwardSpeed * 0.04f;
+        if (absForwardSpeed < 25.0f) steerScale *= absForwardSpeed * 0.04f;
 
         turnSpinTorqueScale =
             groundRatio
@@ -490,8 +490,7 @@ LABEL_118:
         if (m_TurnFactor > 0.0f)
         {
             float lowSpeedTurnScale = 1.0f;
-            if (absForwardSpeed < 5.0f)
-                lowSpeedTurnScale = absForwardSpeed * 0.2f;
+            if (absForwardSpeed < 5.0f) lowSpeedTurnScale = absForwardSpeed * 0.2f;
 
             float angularVelDot = turnSpinTorqueAxis.Dot(ics->m_AngularVelocity);
 
@@ -523,13 +522,9 @@ LABEL_118:
 
         if (absForwardSpeed > 0.0f)
         {
-            if (absForwardSpeed < 5.0f)
-                steerInput *= absForwardSpeed * 0.2f;
+            if (absForwardSpeed < 5.0f) steerInput *= absForwardSpeed * 0.2f;
         }
-        else
-        {
-            steerInput = 0.0f;
-        }
+        else steerInput = 0.0f;
 
         turnSpinTorqueScale =
             groundRatio
@@ -612,7 +607,7 @@ void vehGyro::ApplyScaledTorqueAndForce(const Vector3& torque, const Vector3& of
 
 // vehBikeGyro
 
-void vehBikeGyro::Init(vehCarSim* sim, const char* carName)
+void vehBikeGyro::Init(mcCarSim* sim, const char* carName)
 {
     hook::Thunk<0x4DD6F0>::Call<void>(this, sim, carName); // Call original
 }

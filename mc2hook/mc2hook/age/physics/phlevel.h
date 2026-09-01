@@ -36,4 +36,7 @@ public:
 public:
 	phCollider* GetCollider(int levelIndex);
 	static phSurface* GetMaterialFromIsect(phIntersection* isect);
+
+	// phLevelSimple
+	int AddActiveObject(phCollider* collider, bool a2);
 };

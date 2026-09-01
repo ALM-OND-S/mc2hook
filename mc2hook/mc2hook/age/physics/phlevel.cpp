@@ -33,3 +33,8 @@ phCollider* phLevel::GetCollider(int levelIndex)
 //		return phSurface::DefaultMaterial;
 //	return material;
 //}
+
+int phLevel::AddActiveObject(phCollider* collider, bool a2)
+{
+	return hook::Thunk<0x58DE10>::Call<int>(this, collider, a2); // Call original
+}

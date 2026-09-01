@@ -1,5 +1,5 @@
 #include "aero.h"
-#include <age/vehicle/carsim.h>
+#include <mccar/carsim.h>
 #include <age/physics/phcollider.h>
 #include <age/physics/phinertia.h>
 #include <age/math/math.h>
@@ -160,7 +160,7 @@ void vehAero::Update2()
     }
 }
 
-void vehAero::sub_4E5450(vehCarSim* sim, vehInput* input)
+void vehAero::sub_4E5450(mcCarSim* sim, vehInput* input)
 {
     hook::Thunk<0x4E5450>::Call<void>(this, sim, input); // Call original
 }

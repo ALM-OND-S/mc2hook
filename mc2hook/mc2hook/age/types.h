@@ -108,3 +108,10 @@ enum WEATHER {
 	none = 3,
 	WEATHER_COUNT
 };
+
+enum WHEEL_INDEX {
+	FL = 0,
+	RL = 1,
+	FR = 2,
+	RR = 3
+};

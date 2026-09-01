@@ -1,14 +1,16 @@
-#include "opponentmgr.h"
+#include "manager.h"
 #include <age/core/output.h>
 #include <age/mcgame/racemgr.h>
 #include <age/mcgame/raceconfig.h>
 #include <age/mcgame/racebase.h>
-#include <age/ai/opponent.h>
+#include <mcai/opponent.h>
 #include <age/globals.h>
-#include <age\memory\memory.h>
+#include <age/memory/memory.h>
 
 #include <age/vehicle/entity.h> //
 #include <age/mcgame/factory.h> //
+
+#include <handlers/CustomVehicleHandler.h>
 
 declfield(aiOpponentManager::Instance)(0x698624);
 declfield(aiOpponentManager::byte_6C342B)(0x6C342B);
@@ -47,6 +49,8 @@ bool aiOpponentManager::Init(bool loadResources)
             m_Opponents = nullptr;
         }
 
+        static bool addonVehicles = HookConfig::GetBool("Experimental", "AddonVehicles", false);
+
         for (int i = 0; i < m_NumOpponents; ++i)
         {
             aiOpponent* opponent = &m_Opponents[i];
@@ -54,7 +58,10 @@ bool aiOpponentManager::Init(bool loadResources)
             // One entry per opponent in the race definition.
             aiOpponentDesc* raceOpponentDesc = &raceBase->m_OpponentDescs[i];
 
-            opponent->Init(i, g_VehicleNamesDev[raceOpponentDesc->m_CarIndex], raceOpponentDesc, i, loadResources);
+            if (!addonVehicles)
+                opponent->Init(i, g_VehicleNamesDev[raceOpponentDesc->m_CarIndex], raceOpponentDesc, i, loadResources);
+            else
+                opponent->Init(i, VEHICLE_BASENAMES_DYN[raceOpponentDesc->m_CarIndex], raceOpponentDesc, i, loadResources);
 
             opponent->dword_60 = 0;
 

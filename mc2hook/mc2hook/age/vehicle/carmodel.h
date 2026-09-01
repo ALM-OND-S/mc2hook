@@ -3,7 +3,7 @@
 #include <age/memory/age_alloc_baseclass.h>
 
 class Matrix34;
-class vehCarSim;
+class mcCarSim;
 
 class vehModel : public AGEAllocatedClass
 {
@@ -18,7 +18,7 @@ public:
 	~vehModel() { hook::Thunk<0x4C95D0>::Call<void>(this); }
 
 	void sub_4C4BC0(char a2) { hook::Thunk<0x4C4BC0>::Call<void>(this, a2); }
-	void Init(const char* carName, Matrix34* mtx, vehCarSim* sim, bool a5, bool a6, bool isBike);
+	void Init(const char* carName, Matrix34* mtx, mcCarSim* sim, bool a5, bool a6, bool isBike);
 };
 
 static_assert(sizeof(vehModel) == 0xA198, "vehModel size mismatch");

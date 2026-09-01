@@ -4,10 +4,9 @@
 #include <age/state/gamestate.h>
 #include <age/state/racestate.h>
 #include <age/vehicle/entity.h>
-#include <age/vehicle/carsim.h>
+#include <mccar/carsim.h>
 #include <age/vehicle/carmodel.h>
 #include <age/vehicle/caraudio.h>
-#include <age/vehicle/damage.h>
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/transmission.h>
@@ -21,6 +20,7 @@
 #include <age/physics/phinertia.h>
 #include <age/vector/vector3.h>
 #include <age/vector/matrix34.h>
+#include <mccar/carpickups.h>
 
 #include <age/core/output.h>
 
@@ -281,8 +281,8 @@ LABEL_61:
     }
     else
     {
-        vehDamage* damage = m_Entity->m_Car.m_Damage;
-        if (damage && damage->sub_4CEC50())
+        mcCarPickups* pickups = m_Entity->m_Car.m_Pickups;
+        if (pickups && pickups->sub_4CEC50())
         {
             // Set bit 0x10
             flags = (flags & 0x0000FFFF) | ((((flags >> 16) & 0xFFEDu) | 0x10u) << 16);
@@ -308,12 +308,12 @@ LABEL_61:
         mcCarSSTurbo* ssturbo = m_Entity->m_Car.m_CarSim->m_SSTurbo;
         vehNitro* nitro = m_Entity->m_Car.m_CarSim->m_Nitro;
 
-        if (ssturbo && ssturbo->sub_4D4230())
+        if (ssturbo && ssturbo->CanActivate())
         {
             // SSTurbo active - bit 0x04
             flags = (flags & 0x0000FFFF) | ((((flags >> 16) & 0xFFF3u) | 4u) << 16);
         }
-        else if (nitro && nitro->sub_46A350() && !LOBYTE(ssturbo->dword_70))
+        else if (nitro && nitro->CanActivate() && !LOBYTE(ssturbo->dword_70))
         {
             // Nitro active (only if SST not blocking) - bit 0x08
             flags = (flags & 0x0000FFFF) | ((((flags >> 16) & 0xFFF3u) | 8u) << 16);
@@ -483,7 +483,7 @@ LABEL_61:
     // Apply to car
     if (!mcNetManager::IsNetworkMode)
     {
-        m_Entity->m_Car.m_CarSim->SetDrivable(m_Drivable);
+        m_Entity->m_Car.m_CarSim->SetTransDirection(m_Drivable);
         m_Entity->m_Car.m_CarSim->m_Steer = m_Steer;
         m_Entity->m_Car.m_CarSim->m_Throttle = m_GasBrake;
         m_Entity->m_Car.m_CarSim->m_Brake = m_Brake;
@@ -509,15 +509,13 @@ LABEL_61:
                 nitro->sub_4D1F80();
         }
 
-        // Damage feedback
+        // Pickups
         uint32_t hi = flags >> 16;
 
         if (hi & 0x10)
         {
-            if (vehDamage* damage = m_Entity->m_Car.m_Damage)
-            {
-                damage->sub_4CF500((hi >> 5) & 0xFFFFFF01);
-            }
+            mcCarPickups* pickups = m_Entity->m_Car.m_Pickups;
+            if (pickups) pickups->AttemptActivate((hi >> 5) & 0xFFFFFF01);
         }
     }
 
@@ -584,7 +582,7 @@ void vehInput::UpdateNetworkInput()
     m_Drivable = (int8_t)net_8C[1];
 
     // Apply to simulation
-    m_Entity->m_Car.m_CarSim->SetDrivable(m_Drivable);
+    m_Entity->m_Car.m_CarSim->SetTransDirection(m_Drivable);
 
     m_CarSim->m_Throttle = m_GasBrake;
     m_CarSim->m_Brake = m_Brake;
@@ -627,10 +625,11 @@ void vehInput::UpdateNetworkInput()
 
     if (highFlags & 0x10)
     {
-        if (vehDamage* damage = m_Entity->m_Car.m_Damage)
+        if (mcCarPickups* pickups = m_Entity->m_Car.m_Pickups)
         {
             uint32_t param = (highFlags >> 5) & 0xFFFFFF01;
-            damage->sub_4CF500(param);
+            pickups->AttemptActivate(param);
+            Printf("ATTEMPTACTIVATE\n\n\n");
         }
     }
 }
@@ -668,7 +667,7 @@ void vehInput::ApplyReplayFrame()
     datTimeManager::InvSeconds = 1.0f / datTimeManager::Seconds;
 
     // Apply base state
-    m_Entity->m_Car.m_CarSim->SetDrivable(m_Drivable);
+    m_Entity->m_Car.m_CarSim->SetTransDirection(m_Drivable);
 
     m_CarSim->m_Steer = m_Steer;
     m_CarSim->m_Throttle = m_GasBrake;
@@ -721,16 +720,16 @@ void vehInput::ApplyReplayFrame()
         if (nitro) nitro->sub_4D1F80();
     }
 
-    // Damage
+    // ?
     uint32_t highFlags = (m_CurrentGearFlags >> 16);
 
     if (highFlags & 0x10)
     {
-        vehDamage* damage = m_Entity->m_Car.m_Damage;
-        if (damage)
+        mcCarPickups* pickups = m_Entity->m_Car.m_Pickups;
+        if (pickups)
         {
             uint32_t param = (highFlags >> 5) & 0xFFFFFF01;
-            damage->sub_4CF500(param);
+            pickups->AttemptActivate(param);
         }
     }
 }

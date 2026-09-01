@@ -30,7 +30,7 @@ public:
 
 public:
 	void sub_4D1F80();
-	bool sub_46A350();
+	bool CanActivate();
 	void sub_4D1EE0();
 
 	void Init(int a2, vehEntity* entity, const char* carName);

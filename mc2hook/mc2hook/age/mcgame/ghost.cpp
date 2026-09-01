@@ -3,7 +3,7 @@
 #include <age/memory/memory.h>
 //#include <age/mcgame/factory.h>
 #include <age/vehicle/entity.h>
-#include <age/vehicle/carsim.h>
+#include <mccar/carsim.h>
 #include <age/vehicle/carmodel.h>
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/carSSTurbo.h>
@@ -44,9 +44,9 @@ bool mcGhostCar::Spawn(const char* carName)
 
 void mcGhostCar::MakeSim(const char* carName)
 {
-    vehCarSim* sim = age_new vehCarSim();
+    //mcCarSim* sim = age_new mcCarSim();
 
-    m_Entity->m_Car.m_CarSim = sim;
+    //m_Entity->m_Car.m_CarSim = sim;
 
     //sim->MakeCollider(carName, m_Entity);
     //sim->MakeAero(carName);
@@ -79,9 +79,15 @@ void mcGhostCar::MakeSim(const char* carName)
     //    archetype->SetTypeFlag(1024, 1);
     //}
 
-    // TODO: Figure out this weird flag stuff
-    //uint16_t& flags = reinterpret_cast<uint16_t*>(&m_Entity->m_PhysInst.dword_08)[1];
-    //flags |= ((m_Idx * 0x10) + 0x10) | 8;
+    //// HIWORD(entity->m_PhysInst.dword_08) |= (0x10 * LOWORD(this->m_Idx) + 0x10) | 8;
+    //uint16_t& physFlags = reinterpret_cast<uint16_t*>(&m_Entity->m_PhysInst.dword_08)[1];
+    ////physFlags |= (static_cast<uint16_t>(m_Idx) * 0x10 + 0x10) | 8;
+
+    //// LOBYTE(entity->m_Car.dword_3c) = this->m_Idx;
+    //// BYTE1(entity->m_Car.dword_3c) = 1;
+    //uint8_t* carFlags = reinterpret_cast<uint8_t*>(&m_Entity->m_Car.dword_3c);
+    ////carFlags[0] = static_cast<uint8_t>(m_Idx);
+    ////carFlags[1] = 1;
 }
 
 void mcGhostCar::MakeModel(const char* carName)

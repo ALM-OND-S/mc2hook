@@ -11,4 +11,7 @@ public:
 	int dword_08;
 	int dword_0c;
 	Matrix34 m_Transform;
+
+public:
+	void SetArchetype(phArchetype* archetype);
 };

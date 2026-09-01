@@ -1,6 +1,9 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
 
+constexpr int NUM_NEW_VEHICLE_SLOTS = 256;
+extern char* VEHICLE_BASENAMES_DYN[NUM_NEW_VEHICLE_SLOTS];
+
 class CustomVehicleHandler
 {
 public:

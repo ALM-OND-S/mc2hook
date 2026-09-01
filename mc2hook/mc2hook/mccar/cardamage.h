@@ -1,17 +1,16 @@
 #pragma once
+#include <veh_base/damage.h>
 #include <age/vector/vector3.h>
 #include <age/vector/vector4.h>
 
-class vehCarSim;
+class vehEntity;
+class mcCarSim;
 
-class vehDamage {
+class mcCarDamage : mcCarDamage
+{
 public:
-	void* m_Vtable;
-	int dword_04;
-	int dword_08;
-	int dword_0C;
-	int dword_10;
-	vehCarSim* m_CarSim;
+	vehEntity* m_Entity;
+	mcCarSim* m_CarSim;
 	float m_MaxDamage;
 	float m_MedDamage;
 	float m_ImpactThreshold;
@@ -47,9 +46,4 @@ public:
 	bool m_IsDamagedOut;
 	char field_C3;
 	char field_C4;
-
-public:
-	void sub_4CF500(int a2);
-	bool sub_4CEC50();
-	void sub_4CFCE0(float a2);
 };

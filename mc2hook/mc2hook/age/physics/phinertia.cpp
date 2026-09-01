@@ -133,3 +133,13 @@ float phInertialCS::CalcCollisionNoFriction(Vector3* a2, float a3, Vector3* a4)
 {
     return hook::Thunk<0x5957D0>::Call<float>(this, a2, a3, a4); // Call original
 }
+
+void phInertialCS::InitBoxMass(float mass, float inertiaBoxX, float inertiaBoxY, float inertiaBoxZ)
+{
+    hook::Thunk<0x594A50>::Call<void>(this, mass, inertiaBoxX, inertiaBoxY, inertiaBoxZ); // Call original
+}
+
+void phInertialCS::Zero()
+{
+    hook::Thunk<0x594700>::Call<void>(this); // Call original
+}

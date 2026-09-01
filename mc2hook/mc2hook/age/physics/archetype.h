@@ -1,5 +1,6 @@
 #pragma once
-#include <mc2hook\mc2hook.h>
+#include <mc2hook/mc2hook.h>
+#include <age/vector/vector3.h>
 
 class phBound;
 
@@ -24,6 +25,10 @@ public:
     float dword_3C;
 
 public:
+    static hook::Type<float> dword_674060; // 0.3f
+
     float sub_47B9D0();
-    void SetTypeFlag(int type, char flag);
+    void SetTypeFlag(uint mask, bool value);
+    void SetMass(float mass);
+    void SetAngInertia(const Vector3& angInertia);
 };

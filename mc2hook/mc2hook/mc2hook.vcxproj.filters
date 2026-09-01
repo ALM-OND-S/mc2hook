@@ -31,7 +31,7 @@
     <ClCompile Include="age\vector\vector3.cpp" />
     <ClCompile Include="age\vector\vector4.cpp" />
     <ClCompile Include="age\vehicle\automgr.cpp" />
-    <ClCompile Include="age\vehicle\carsim.cpp" />
+    <ClCompile Include="mccar\carsim.cpp" />
     <ClCompile Include="age\vehicle\drivetrain.cpp" />
     <ClCompile Include="age\vehicle\engine.cpp" />
     <ClInclude Include="age\vehicle\engine.h" />
@@ -78,7 +78,6 @@
     <ClCompile Include="handlers\HybridFileMethodsHandler.cpp" />
     <ClCompile Include="handlers\InputHandler.cpp" />
     <ClCompile Include="handlers\LevelExtentsHandler.cpp" />
-    <ClCompile Include="handlers\MaxVelocityHandler.cpp" />
     <ClCompile Include="handlers\OnlineBangersHandler.cpp" />
     <ClCompile Include="handlers\PathHandler.cpp" />
     <ClCompile Include="handlers\PrinterHandler.cpp" />
@@ -100,7 +99,7 @@
     <ClCompile Include="age\vehicle\caraudio.cpp" />
     <ClCompile Include="age\vehicle\carSSTurbo.cpp" />
     <ClCompile Include="age\vehicle\nitro.cpp" />
-    <ClCompile Include="age\vehicle\damage.cpp" />
+    <ClCompile Include="veh_base\damage.cpp" />
     <ClCompile Include="age\data\replay.cpp" />
     <ClCompile Include="age\data\memstream.cpp" />
     <ClCompile Include="age\input\joystick.cpp" />
@@ -123,15 +122,20 @@
     <ClCompile Include="age\mcgame\player.cpp" />
     <ClCompile Include="age\mcgame\factory.cpp" />
     <ClCompile Include="age\vehicle\car.cpp" />
-    <ClCompile Include="age\ai\opponentmgr.cpp" />
+    <ClCompile Include="mcai\manager.cpp" />
     <ClCompile Include="age\mcgame\racemgr.cpp" />
-    <ClCompile Include="age\ai\opponent.cpp" />
+    <ClCompile Include="mcai\opponent.cpp" />
     <ClCompile Include="age\data\parse.cpp" />
     <ClCompile Include="age\age.cpp" />
     <ClCompile Include="age\mcgame\ghost.cpp" />
     <ClCompile Include="age\mcgame\ghostmgr.cpp" />
     <ClCompile Include="age\vehicle\entity.cpp" />
     <ClCompile Include="age\mcgame\racebase.cpp" />
+    <ClCompile Include="age\physics\archmgr.cpp" />
+    <ClCompile Include="age\physics\phinst.cpp" />
+    <ClCompile Include="mcai\factory.cpp" />
+    <ClCompile Include="mccar\carpickups.cpp" />
+    <ClCompile Include="veh_dyna\chassis.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="age\camera\playercamera.h" />
@@ -187,7 +191,7 @@
     <ClInclude Include="age\vehicle\aero.h" />
     <ClInclude Include="age\vehicle\automgr.h" />
     <ClInclude Include="age\vehicle\car.h" />
-    <ClInclude Include="age\vehicle\carsim.h" />
+    <ClInclude Include="mccar\carsim.h" />
     <ClInclude Include="age\vehicle\carSSTurbo.h" />
     <ClInclude Include="age\vehicle\drivetrain.h" />
     <ClInclude Include="age\vehicle\vehinput.h" />
@@ -239,7 +243,6 @@
     <ClInclude Include="handlers\HybridFileMethodsHandler.h" />
     <ClInclude Include="handlers\InputHandler.h" />
     <ClInclude Include="handlers\LevelExtentsHandler.h" />
-    <ClInclude Include="handlers\MaxVelocityHandler.h" />
     <ClInclude Include="handlers\OnlineBangersHandler.h" />
     <ClInclude Include="handlers\PathHandler.h" />
     <ClInclude Include="handlers\PrinterHandler.h" />
@@ -271,7 +274,7 @@
     <ClInclude Include="age\vehicle\carmodel.h" />
     <ClInclude Include="age\state\racestate.h" />
     <ClInclude Include="age\vehicle\caraudio.h" />
-    <ClInclude Include="age\vehicle\damage.h" />
+    <ClInclude Include="veh_base\damage.h" />
     <ClInclude Include="age\data\replay.h" />
     <ClInclude Include="age\data\memstream.h" />
     <ClInclude Include="age\input\joystick.h" />
@@ -292,14 +295,23 @@
     <ClInclude Include="age\mcgame\playermgr.h" />
     <ClInclude Include="age\mcgame\player.h" />
     <ClInclude Include="age\mcgame\factory.h" />
-    <ClInclude Include="age\ai\opponent.h" />
-    <ClInclude Include="age\ai\opponentmgr.h" />
+    <ClInclude Include="mcai\opponent.h" />
+    <ClInclude Include="mcai\manager.h" />
     <ClInclude Include="age\mcgame\racemgr.h" />
     <ClInclude Include="age\mcgame\racebase.h" />
     <ClInclude Include="age\vehicle\aiinfo.h" />
     <ClInclude Include="age\age.h" />
     <ClInclude Include="age\mcgame\ghost.h" />
     <ClInclude Include="age\mcgame\ghostmgr.h" />
+    <ClInclude Include="age\physics\archmgr.h" />
+    <ClInclude Include="mcplayer\racer.h" />
+    <ClInclude Include="mcai\damage.h" />
+    <ClInclude Include="mcai\factory.h" />
+    <ClInclude Include="mccar\cardamage.h" />
+    <ClInclude Include="mccar\carpickups.h" />
+    <ClInclude Include="veh_base\factory.h" />
+    <ClInclude Include="veh_base\sim.h" />
+    <ClInclude Include="veh_dyna\chassis.h" />
   </ItemGroup>
   <ItemGroup>
     <Library Include="discord-rpc\lib\discord_game_sdk.dll.lib" />

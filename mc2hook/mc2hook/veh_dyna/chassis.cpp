@@ -1,0 +1,27 @@
+#include "chassis.h"
+
+int vehChassis::OnGround()
+{
+    //return hook::Thunk<0x56A000>::Call<int>(this); // Call original
+
+    int numWheelsOnGround = 0;
+
+    for (int i = 0; i < m_NumWheels; i++)
+    {
+        if (m_Wheels[i]->m_OnGround)
+            numWheelsOnGround++;
+    }
+    return numWheelsOnGround;
+}
+
+int vehChassis::BottomedOut()
+{
+    int numWheelsBottomedOut = 0;
+
+    for (int i = 0; i < m_NumWheels; i++)
+    {
+        if (m_Wheels[i]->m_BottomedOut)
+            numWheelsBottomedOut++;
+    }
+    return numWheelsBottomedOut;
+}

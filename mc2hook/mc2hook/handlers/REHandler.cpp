@@ -19,7 +19,7 @@
 #include <age/mcgame/layermgr.h>
 #include <age/input/joystick.h>
 #include <age/gfx/pipeline.h>
-#include <age/vehicle/carsim.h>
+#include <mccar/carsim.h>
 #include <age/vehicle/aero.h>
 #include <age/vehicle/drivetrain.h>
 #include <age/physics/phlevel.h>
@@ -27,14 +27,15 @@
 #include <age/data/replay.h>
 #include <age/mcgame/mcreplay.h>
 #include <age/mcgame/factory.h>
+#include <mcai/factory.h>
 #include <age/vehicle/automgr.h>
 #include <age/vehicle/car.h>
-#include <age/ai/opponentmgr.h>
+#include <mcai/manager.h>
 #include <age/vehicle/entity.h>
 #include <age/mcgame/racebase.h>
 
 void REHandler::Install()
-{
+{    
     // age
     InstallCallback("ageEndFrame()", "ageEndFrame()",
         &ageEndFrame, { cb::jmp(0x5ED0C0) });
@@ -45,11 +46,14 @@ void REHandler::Install()
     // gfxPipeline
     InstallCallback("gfxPipeline::gfxWindowCreate()", "gfxPipeline::gfxWindowCreate()", &gfxPipeline::gfxWindowCreate, { cb::call(0x5F1338) });
 
-    InstallCallback("gfxPipeline::InputWindowProc()", "gfxPipeline::InputWindowProc()",
-        &gfxPipeline::InputWindowProc, {
-            cb::jmp(0x5ED4E9),
-            cb::jmp(0x5ED517),
-            cb::jmp(0x5ED544) });
+    //InstallCallback("gfxPipeline::InputWindowProc()", "gfxPipeline::InputWindowProc()",
+    //    &gfxPipeline::InputWindowProc, {
+    //        cb::jmp(0x5ED4E9),
+    //        cb::jmp(0x5ED517),
+    //        cb::jmp(0x5ED544) });
+
+    //InstallCallback("gfxPipeline::gfxWindowProc()", "gfxPipeline::gfxWindowProc()", &gfxPipeline::gfxWindowProc, { cb::call(0x5F1338) });
+    //InstallCallback("gfxPipeline::gfxWindowProc()", "gfxPipeline::gfxWindowProc()", &gfxPipeline::gfxWindowProc, { cb::jmp(0x5ED560) });
     
     // camTrackCS
     InstallCallback("camTrackCS::UpdateSS()", "camTrackCS::UpdateSS()",
@@ -368,8 +372,8 @@ void REHandler::Install()
             cb::call(0x4038D1), // After loading movie
         });
 
-    // vehCarSim (WIP)
-    //InstallVTableHook("vehCarSim::UpdateControls()", &vehCarSim::UpdateControlsComp, { 0x644A6C });
+    // mcCarSim (WIP)
+    //InstallVTableHook("mcCarSim::UpdateControls()", &mcCarSim::UpdateControlsComp, { 0x644A6C });
 
     // vehAero (Seems broken)
     //InstallVTableHook("vehAero::Update()", &vehAero::Update, { 0x646710 });
@@ -427,14 +431,14 @@ void REHandler::Install()
     //        cb::call(0x40531B),
     //    });
 
-    // mcPlayerFactory / vehFactory
+    // mcPlayerFactory / aiOpponentFactory / vehFactory
     InstallCallback("mcPlayerFactory::Create()", "mcPlayerFactory::Create()",
         &mcPlayerFactory::Create, {
             cb::call(0x468A41),
         });
 
-    InstallCallback("vehFactory::Create()", "vehFactory::Create()",
-        &vehFactory::Create, {
+    InstallCallback("aiOpponentFactory::Construct()", "aiOpponentFactory::Construct()",
+        &aiOpponentFactory::Construct, {
             cb::call(0x4B01E9),
         });
 

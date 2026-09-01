@@ -1,5 +1,5 @@
 #include "playercamera.h"
-
+#include <age/age.h>
 #include <age/data/timemgr.h>
 #include <age/math/math.h>
 #include <age/core/output.h>
@@ -11,9 +11,11 @@
 #include <age/vehicle/transmission.h>
 #include <age/vehicle/automgr.h>
 #include <age/mcnetwork/netmanager.h>
+#include <mccar/carsim.h>
 
 #include <age/input/keyboard.h>
 #include <dinput.h>
+
 
 void camTrackCS::UpdateSS()
 {
@@ -97,8 +99,6 @@ void camTrackCS::UpdateSS()
         dword_210 = dword_210 | 0x20000;*/ // Byte stuff
 
     camTrackCS::Update();
-
-    //Printf("X: %f\r", vehcarsim->collider->ics->world_transform.GetRow(3).X);
 }
 
 void camTrackCS::Update()
@@ -197,13 +197,13 @@ void camTrackCS::UpdateCar()
     phInertialCS* ics = m_CarSim->m_Collider->m_ICS;
     float angMomSq = pow(ics->m_AngularMomentum.X, 2) + pow(ics->m_AngularMomentum.Y, 2) + pow(ics->m_AngularMomentum.Z, 2);
 
-    if (m_CarSim->OnGround() <= m_CarSim->m_NumWheels * 0.51)
+    if (m_CarSim->OnGround() <= m_CarSim->m_NumWheels * 0.51f)
     {
         this->dword_17c += datTimeManager::GetSeconds(); // Some airtime?
-        if (dword_17c > 0.1)
+        if (dword_17c > 0.1f)
         {
             this->dword_184 = 0;
-            m_SomeTimer = 0.0;
+            m_SomeTimer = 0.0f;
         }
     }
     else
@@ -215,6 +215,7 @@ void camTrackCS::UpdateCar()
             this->dword_17c = 0.0;
         }
     }
+
     if (angMomSq > 2250000.0 && !this->dword_184)
     {
         this->dword_188 = 1;
@@ -223,6 +224,7 @@ void camTrackCS::UpdateCar()
 
     this->dword_188 = 0;
 }
+
 
 void camTrackCS::UpdateHill()
 {

@@ -3,10 +3,10 @@
 #include <age/memory/age_alloc_baseclass.h>
 
 class vehEntity;
-class vehCarSim;
+class mcCarSim;
 class vehModel;
 class vehAudio;
-class vehDamage;
+class mcCarDamage;
 class ioDeviceWrapper;
 
 class vehInput : public AGEAllocatedClass // Rename to vehPlayerInput?
@@ -38,7 +38,7 @@ public:
                                        //   Bit 24 (0x1000000): Upshift request
                                        //   Bit 25 (0x2000000): Downshift request
                                        //   Bit 31 (0x80000000): Counter-steer detect
-    vehCarSim* m_CarSim;               // Pointer to the vehicle car simulation
+    mcCarSim* m_CarSim;               // Pointer to the vehicle car simulation
     int dword_30;
     int dword_34;
     int dword_38;

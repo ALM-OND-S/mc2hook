@@ -2,7 +2,8 @@
 #include <mc2hook\mc2hook.h>
 #include <age/vector/matrix34.h>
 #include <age/physics/phinst_old.h>
-#include <age/vehicle/carsim.h>
+
+class mcCarSim;
 
 class camTrackCS {
 
@@ -41,7 +42,7 @@ private:
 	float dword_e4;
 	float dword_e8;
 	float dword_ec;
-	vehCarSim* m_CarSim;
+	mcCarSim* m_CarSim;
 	int m_ReverseOn;
 	float m_JoltAmplitude;
 	float m_JoltDuration;
