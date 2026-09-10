@@ -7,7 +7,7 @@
 #include <age/globals.h>
 #include <memory/memory.h>
 
-#include <age/vehicle/entity.h> //
+#include <veh_base/entity.h> //
 #include <age/mcgame/factory.h> //
 
 #include <handlers/CustomVehicleHandler.h>

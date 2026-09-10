@@ -5,11 +5,11 @@
 #include <core/output.h>
 #include <phinertia/inertia.h>
 #include <physics/collider.h>
-#include <age/vehicle/carSSTurbo.h>
+#include <mccar/carSSTurbo.h>
 #include <age/vehicle/nitro.h>
-#include <age/vehicle/aero.h>
-#include <age/vehicle/transmission.h>
-#include <age/vehicle/automgr.h>
+#include <veh_dyna/aero.h>
+#include <veh_dyna/transmission.h>
+#include <veh_dyna/automgr.h>
 #include <age/mcnetwork/netmanager.h>
 #include <mccar/carsim.h>
 

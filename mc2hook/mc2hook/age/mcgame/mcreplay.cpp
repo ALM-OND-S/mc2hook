@@ -5,7 +5,7 @@
 #include <mcgame/replay.h>
 #include <age/mcgame/playermgr.h>
 #include <age/mcgame/player.h>
-#include <age/vehicle/entity.h>
+#include <veh_base/entity.h>
 #include <mccar/carsim.h>
 #include <physics/collider.h>
 #include <phinertia/inertia.h>

@@ -1,12 +1,12 @@
 #include "carsim.h"
 #include <math/math.h>
-#include <age/vehicle/entity.h>
-#include <age/vehicle/transmission.h>
-#include <age/vehicle/aero.h>
-#include <age/vehicle/wheel.h>
+#include <veh_base/entity.h>
+#include <veh_dyna/transmission.h>
+#include <veh_dyna/aero.h>
+#include <veh_dyna/wheel.h>
 #include <physics/collider.h>
 #include <age/vehicle/nitro.h>
-#include <age/vehicle/carSSTurbo.h>
+#include <mccar/carSSTurbo.h>
 #include <veh_base/damage.h>
 #include <physics/archetype.h>
 #include <memory/memory.h>

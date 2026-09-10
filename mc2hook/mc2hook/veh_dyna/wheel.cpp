@@ -3,7 +3,7 @@
 #include <data/timemgr.h>
 #include <math/math.h>
 #include <mccar/carsim.h>
-#include <age/vehicle/transmission.h>
+#include <veh_dyna/transmission.h>
 #include <physics/collider.h>
 #include <phcore/surface.h>
 #include <physics/level.h>

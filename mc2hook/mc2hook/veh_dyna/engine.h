@@ -1,7 +1,7 @@
 #pragma once
 #include <vector/matrix34.h>
-#include <age/vehicle/transmission.h>
-#include <age/vehicle/drivetrain.h>
+#include <veh_dyna/transmission.h>
+#include <veh_dyna/drivetrain.h>
 #include <phinertia/inertia.h>
 #include <age/physics/phinst_old.h>
 

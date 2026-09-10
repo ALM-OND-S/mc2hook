@@ -4,7 +4,7 @@
 #include <phinertia/inertia.h>
 #include <math/math.h>
 #include <data/timemgr.h>
-#include <age/vehicle/vehinput.h>
+#include <veh_base/input.h>
 
 void vehAero::Update()
 {

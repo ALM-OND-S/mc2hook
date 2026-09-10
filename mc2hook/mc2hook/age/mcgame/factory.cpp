@@ -1,21 +1,21 @@
 #include "factory.h"
-#include <age/vehicle/entity.h>
+#include <veh_base/entity.h>
 #include <mccar/carsim.h>
-#include <age/vehicle/aero.h>
-#include <age/vehicle/automgr.h>
-#include <age/vehicle/car.h>
+#include <veh_dyna/aero.h>
+#include <veh_dyna/automgr.h>
+#include <mccar/car.h>
 #include <age/vehicle/nitro.h>
-#include <age/vehicle/carSSTurbo.h>
+#include <mccar/carSSTurbo.h>
 #include <age/vehicle/aiinfo.h>
 #include <parse/parse.h>
 #include <physics/archetype.h>
-#include <age/vehicle/vehinput.h>
-#include <age/vehicle/carmodel.h>
+#include <veh_base/input.h>
+#include <veh_base/model.h>
 #include <memory/memory.h>
 #include <data/args.h>
 #include <physics/collider.h>
 #include <age/physics/ph_some_inst_parent.h>
-#include <age/vehicle/gyro.h>
+#include <veh_dyna/gyro.h>
 
 #include <core/output.h> //
 

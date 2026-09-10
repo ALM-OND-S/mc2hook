@@ -1,6 +1,6 @@
 #pragma once
-#include <age/vehicle/engine.h>
-#include <age/vehicle/drivetrain.h>
+#include <veh_dyna/engine.h>
+#include <veh_dyna/drivetrain.h>
 
 class vehEngine;
 
