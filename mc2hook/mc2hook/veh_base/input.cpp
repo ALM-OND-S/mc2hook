@@ -1,8 +1,8 @@
 #include "input.h"
 #include <mc2hook\mc2hook.h>
-#include <age/mcnetwork/netmanager.h>
-#include <age/state/gamestate.h>
-#include <age/state/racestate.h>
+#include <mcnet/manager.h>
+#include <mcgame/gamestate.h>
+#include <mcdata/racestate.h>
 #include <veh_base/entity.h>
 #include <mccar/carsim.h>
 #include <veh_base/model.h>
@@ -11,9 +11,9 @@
 #include <age/vehicle/nitro.h>
 #include <veh_dyna/transmission.h>
 #include <math/math.h>
-#include <mcgame/replay.h>
+#include <data/replay.h>
 #include <data/timemgr.h>
-#include <age/mcaudio/mcaudiomgr.h>
+#include <mcaudio/mcaudiomgr.h>
 #include <input/joystick.h>
 #include <input/device.h>
 #include <physics/collider.h>

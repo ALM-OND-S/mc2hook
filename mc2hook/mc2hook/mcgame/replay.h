@@ -1,22 +1,27 @@
 #pragma once
-#include <mc2hook\mc2hook.h>
 
 class datMemStream;
 
-class datReplay
-{
+class mcReplay {
 public:
-    static hook::Type<int> sm_FrameSize;
-    static hook::Type<datMemStream*> sm_ReplayFile;
-    static hook::Type<bool> sm_Playback;
+	int dword_00;
+	int dword_04;
+	int dword_08;
+	int dword_0c;
+	int dword_10;
+	void* dword_14;
+	int dword_18;
+	datMemStream* m_Stream; // probably not datMemStream, it's a raw replay buffer
+	int dword_20;
+	int m_Size;
+	int dword_28;
+	int dword_2c;
+	int dword_30;
+	int dword_34;
+	int dword_38;
+	int dword_3c;
 
 public:
-    static uint8_t GetByte();
-    static int GetInt();
-    static void RecordInt(int a1);
-    static uint16_t ReadFrameUInt16();
-
-    static bool BeginRecording(datMemStream* stream);
-    static void Reset();
-    static void datReplay_614770();
+	void StartPlayback();
+	bool Update(); // Divergence checks
 };

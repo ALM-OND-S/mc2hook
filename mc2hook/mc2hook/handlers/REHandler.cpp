@@ -4,19 +4,19 @@
 #include <veh_dyna/transmission.h>
 #include <veh_dyna/engine.h>
 #include <veh_dyna/wheel.h>
-#include <age/state/gamestate.h>
+#include <mcgame/gamestate.h>
 #include <data/timemgr.h>
-#include <age/mcnetwork/netmanager.h>
+#include <mcnet/manager.h>
 #include <age/mcfe/hub.h>
-#include <age/mcnetwork/lobbyderived.h>
+#include <mcfe/lobbyderived.h>
 #include <gfx/state.h>
 #include <veh_base/input.h>
 #include <age/mcgame/mcdata.h>
-#include <age/mcgame/mcconfig.h>
+#include <mcdata/config.h>
 #include <input/input.h>
 #include <veh_dyna/gyro.h>
-#include <age/hud/hudMap.h> //
-#include <age/mcgame/layermgr.h>
+#include <mchud/hudMap.h> //
+#include <mcgame/layermgr.h>
 #include <input/joystick.h>
 #include <gfx/pipeline.h>
 #include <mccar/carsim.h>
@@ -24,15 +24,15 @@
 #include <veh_dyna/drivetrain.h>
 #include <physics/level.h>
 #include <data/memstream.h>
+#include <data/replay.h>
 #include <mcgame/replay.h>
-#include <age/mcgame/mcreplay.h>
-#include <age/mcgame/factory.h>
+#include <mcplayer/factory.h>
 #include <mcai/factory.h>
 #include <veh_dyna/automgr.h>
 #include <mccar/car.h>
 #include <mcai/manager.h>
 #include <veh_base/entity.h>
-#include <age/mcgame/racebase.h>
+#include <mcrace/racebase.h>
 
 void REHandler::Install()
 {    

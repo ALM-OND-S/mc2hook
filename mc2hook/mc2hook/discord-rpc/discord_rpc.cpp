@@ -1,8 +1,8 @@
 #include "discord_rpc.h"
 #include <discord-rpc/gamesdk/discord.h> // SDK
 #include <chrono>
-#include <age/mcgame/raceconfig.h>
-#include <age/mcnetwork/netmanager.h>
+#include <mcdata/raceconfig.h>
+#include <mcnet/manager.h>
 #include <veh_dyna/automgr.h>
 #include <age/types.h>
 #include <age/globals.h>

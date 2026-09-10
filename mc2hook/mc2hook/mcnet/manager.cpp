@@ -1,5 +1,5 @@
-#include "netmanager.h"
-#include "age/state/gamestate.h"
+#include "manager.h"
+#include <mcgame/gamestate.h>
 #include "age/types.h"
 #include "discord-rpc/discord_rpc.h"
 #include <core/output.h>

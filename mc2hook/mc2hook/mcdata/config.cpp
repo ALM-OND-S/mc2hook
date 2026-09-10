@@ -1,4 +1,4 @@
-#include "mcconfig.h"
+#include "config.h"
 #include <core/output.h>
 #include <age/types.h>
 #include <age/globals.h>

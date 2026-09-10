@@ -1,41 +1,94 @@
 #include "replay.h"
+#include <mc2hook\mc2hook.h>
 #include <core/output.h> //
+#include <mcdata/raceconfig.h>
+#include <data/replay.h>
+#include <mcplayer/playermgr.h>
+#include <mcplayer/player.h>
+#include <veh_base/entity.h>
+#include <mccar/carsim.h>
+#include <physics/collider.h>
+#include <phinertia/inertia.h>
+#include <mcnet/manager.h>
 
-declfield(datReplay::sm_FrameSize)(0x860670);
-declfield(datReplay::sm_ReplayFile)(0x86066C);
-declfield(datReplay::sm_Playback)(0x860620);
+// TODO: Put all mc classes into a mcgame folder
 
-uint8_t datReplay::GetByte()
+// Loading .rpy
+#include <fstream>
+#include <vector>
+#include <cstdint>
+
+void mcReplay::StartPlayback()
 {
-	return hook::StaticThunk<0x614590>::Call<uint8_t>(); // Call original
+	// Save .rpy
+	//int size = this->m_Size;
+	//const void* adr = this->m_Stream; //this->dword_14; // MIGHT NOT BE datMemStream!!!
+	//std::ofstream file("replay_dump.rpy", std::ios::binary);
+	//file.write((char*)adr, size);
+	//Printf("SAVED REPLAY\n");
+
+	// Load .rpy
+	//std::ifstream file("replay_dump.rpy", std::ios::binary);
+	//file.seekg(0, std::ios::end);
+	//size_t size = file.tellg();
+	//file.seekg(0);
+	//file.read((char*)this->m_Stream, size);
+	//file.read((char*)this->dword_18, size); //
+	//this->m_Size = size;
+
+	hook::Thunk<0x404C80>::Call<void>(this); // Call original
 }
 
-int datReplay::GetInt()
+bool mcReplay::Update()
 {
-	return hook::StaticThunk<0x6145E0>::Call<int>(); // Call original
-}
+	//return hook::Thunk<0x404D50>::Call<bool>(this); // Call original
 
-void datReplay::RecordInt(int a1)
-{
-	hook::StaticThunk<0x614700>::Call<void>(a1); // Call original
-}
+    if (mcRaceConfig::g_NumPlayers == 0)
+        return true;
 
-uint16_t datReplay::ReadFrameUInt16()
-{
-	return hook::StaticThunk<0x6145C0>::Call<uint16_t>(); // Call original
-}
+    datReplay::datReplay_614770();
 
-bool datReplay::BeginRecording(datMemStream* stream)
-{
-	return hook::StaticThunk<0x6148C0>::Call<bool>(stream); // Call original
-}
+    // Frame counter (cycles every 0x1E = 30 ticks)
+    this->dword_10++;
+    if (this->dword_10 < 0x1E)
+        return true;
+    this->dword_10 = 0;
 
-void datReplay::Reset()
-{
-	hook::StaticThunk<0x614740>::Call<void>(); // Call original
-}
+    mcPlayer* player = mcPlayerManager::GetPlayer(0); //(mcNetManager::IsNetworkMode ? mcNetManager::LocalPlayerID : 0);
+    phInertialCS* ics = player->m_Entity->m_Car.m_CarSim->m_Collider->m_ICS;
 
-void datReplay::datReplay_614770()
-{
-	hook::StaticThunk<0x614770>::Call<void>(); // Call original
+    float x = ics->m_WorldTransform.m30;
+    float y = ics->m_WorldTransform.m31;
+    float z = ics->m_WorldTransform.m32;
+
+    if (!datReplay::sm_ReplayFile)
+        return true;
+
+    if (datReplay::sm_Playback)
+    {
+        // Retreive recorded xyz
+        
+        float replayX = *(float*)(datReplay::GetInt());
+        float replayY = *(float*)(datReplay::GetInt());
+        float replayZ = *(float*)(datReplay::GetInt());
+
+        // Divergence check: compare recorded pos vs actual pos
+        if (replayX != x || replayY != y || replayZ != z)
+        {
+            Warningf("Replay diverged! Was (%f, %f, %f), but is instead (%f, %f, %f)!",
+                     replayX, replayY, replayZ,
+                     x, y, z);
+
+            return false;
+        }
+    }
+    else
+    {
+        // Record pos
+        datReplay::RecordInt(*(int*)&x);
+        datReplay::RecordInt(*(int*)&y);
+        datReplay::RecordInt(*(int*)&z);
+    }
+
+    return true;
 }
