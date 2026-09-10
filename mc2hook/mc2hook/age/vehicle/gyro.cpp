@@ -4,8 +4,8 @@
 #include <data/timemgr.h>
 #include <math/math.h>
 #include <age/vehicle/vehinput.h>
-#include <age/physics/archetype.h>
-#include <age/physics/phcollider.h>
+#include <physics/archetype.h>
+#include <physics/collider.h>
 #include <age/physics/ph_some_inst_parent.h>
 #include <age/vehicle/drivetrain.h>
 #include <age/vehicle/engine.h>

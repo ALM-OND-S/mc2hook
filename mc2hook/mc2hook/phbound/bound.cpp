@@ -1,6 +1,6 @@
 #include "bound.h"
 #include <mc2hook\mc2hook.h>
-#include <age/physics/phsurface.h>
+#include <phcore/surface.h>
 
 phSurface* phBound::sub_5A5550(int a2, int a3)
 {

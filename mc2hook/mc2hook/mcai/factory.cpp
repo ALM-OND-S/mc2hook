@@ -9,11 +9,11 @@
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/aiinfo.h>
 #include <parse/parse.h>
-#include <age/physics/archetype.h>
+#include <physics/archetype.h>
 //#include <age/vehicle/vehinput.h>
 #include <age/vehicle/carmodel.h>
 #include <data/args.h>
-#include <age/physics/phcollider.h>
+#include <physics/collider.h>
 #include <age/physics/ph_some_inst_parent.h>
 #include <age/vehicle/gyro.h>
 

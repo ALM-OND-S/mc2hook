@@ -1,9 +1,9 @@
-#include "phlevel.h"
-#include <age/physics/phcollider.h>
-#include <age/physics/phsurface.h>
-#include <age/physics/intersection.h>
-#include <age/physics/bound.h>
-#include <age/physics/archetype.h>
+#include "level.h"
+#include <physics/collider.h>
+#include <phcore/surface.h>
+#include <phcore/isect.h>
+#include <phbound/bound.h>
+#include <physics/archetype.h>
 
 #include <core/output.h> //
 

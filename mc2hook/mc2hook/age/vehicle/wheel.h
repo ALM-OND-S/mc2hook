@@ -1,7 +1,7 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
 #include <vector/matrix34.h> //
-#include <age/physics/phinertia.h> //
+#include <phinertia/inertia.h> //
 
 static constexpr float flt_673E50 = 0.17f;
 static constexpr float flt_673E54 = 0.25f;

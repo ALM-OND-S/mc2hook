@@ -3,8 +3,8 @@
 #include <data/timemgr.h>
 #include <math/math.h>
 #include <core/output.h>
-#include <age/physics/phinertia.h>
-#include <age/physics/phcollider.h>
+#include <phinertia/inertia.h>
+#include <physics/collider.h>
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/aero.h>

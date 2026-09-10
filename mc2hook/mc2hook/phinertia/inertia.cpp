@@ -1,5 +1,5 @@
 #include <mc2hook\mc2hook.h>
-#include "phinertia.h"
+#include "inertia.h"
 #include <data/timemgr.h>
 
 #include <core/output.h> //

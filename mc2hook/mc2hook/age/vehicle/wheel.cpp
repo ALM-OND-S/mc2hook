@@ -4,11 +4,11 @@
 #include <math/math.h>
 #include <mccar/carsim.h>
 #include <age/vehicle/transmission.h>
-#include <age/physics/phcollider.h>
-#include <age/physics/phsurface.h>
-#include <age/physics/phlevel.h>
-#include <age/physics/intersection.h>
-#include <age/physics/simulator.h>
+#include <physics/collider.h>
+#include <phcore/surface.h>
+#include <physics/level.h>
+#include <phcore/isect.h>
+#include <physics/simulator.h>
 
 #include <core/output.h> //
 #include <input/keyboard.h> //

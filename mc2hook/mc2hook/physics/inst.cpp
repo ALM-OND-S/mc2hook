@@ -1,4 +1,4 @@
-#include "phinst.h"
+#include "inst.h"
 #include <mc2hook/mc2hook.h>
 
 void phInst::SetArchetype(phArchetype* archetype)

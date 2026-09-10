@@ -1,7 +1,7 @@
 #include "aero.h"
 #include <mccar/carsim.h>
-#include <age/physics/phcollider.h>
-#include <age/physics/phinertia.h>
+#include <physics/collider.h>
+#include <phinertia/inertia.h>
 #include <math/math.h>
 #include <data/timemgr.h>
 #include <age/vehicle/vehinput.h>

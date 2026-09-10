@@ -1,4 +1,4 @@
-#include "intersection.h"
+#include "isect.h"
 #include <mc2hook\mc2hook.h>
 #include <vector/vector3.h> //
 

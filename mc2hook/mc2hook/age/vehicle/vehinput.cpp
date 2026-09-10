@@ -16,8 +16,8 @@
 #include <age/mcaudio/mcaudiomgr.h>
 #include <input/joystick.h>
 #include <input/device.h>
-#include <age/physics/phcollider.h>
-#include <age/physics/phinertia.h>
+#include <physics/collider.h>
+#include <phinertia/inertia.h>
 #include <vector/vector3.h>
 #include <vector/matrix34.h>
 #include <mccar/carpickups.h>

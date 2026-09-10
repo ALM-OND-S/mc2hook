@@ -1,5 +1,5 @@
-#include "phcollider.h"
-#include <age/physics/phinertia.h>
+#include "collider.h"
+#include <phinertia/inertia.h>
 
 declfield(phCollider::SomeVtable)(0x6508DC);
 

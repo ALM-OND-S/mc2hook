@@ -2,7 +2,7 @@
 #include <vector/matrix34.h>
 #include <age/vehicle/transmission.h>
 #include <age/vehicle/drivetrain.h>
-#include <age/physics/phinertia.h>
+#include <phinertia/inertia.h>
 #include <age/physics/phinst_old.h>
 
 class vehTransmission;

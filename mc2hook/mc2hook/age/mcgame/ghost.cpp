@@ -9,9 +9,9 @@
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/aiinfo.h>
 #include <parse/parse.h>
-#include <age/physics/archetype.h>
+#include <physics/archetype.h>
 #include <data/args.h>
-#include <age/physics/phcollider.h>
+#include <physics/collider.h>
 
 #include <core/output.h> //
 

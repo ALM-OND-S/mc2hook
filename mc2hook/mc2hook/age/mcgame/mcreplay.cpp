@@ -7,8 +7,8 @@
 #include <age/mcgame/player.h>
 #include <age/vehicle/entity.h>
 #include <mccar/carsim.h>
-#include <age/physics/phcollider.h>
-#include <age/physics/phinertia.h>
+#include <physics/collider.h>
+#include <phinertia/inertia.h>
 #include <age/mcnetwork/netmanager.h>
 
 // TODO: Put all mc classes into a mcgame folder
