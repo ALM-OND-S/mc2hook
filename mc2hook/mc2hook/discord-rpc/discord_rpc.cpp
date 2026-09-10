@@ -7,7 +7,7 @@
 #include <age/types.h>
 #include <age/globals.h>
 #include <age/string/string.h>
-#include <age/math/math.h>
+#include <math/math.h>
 
 static const int64_t DISCORD_APP_ID = 1472018278317555722;
 static discord::Core* g_core = nullptr;

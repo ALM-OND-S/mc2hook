@@ -1,5 +1,5 @@
 #include "carsim.h"
-#include <age/math/math.h>
+#include <math/math.h>
 #include <age/vehicle/entity.h>
 #include <age/vehicle/transmission.h>
 #include <age/vehicle/aero.h>
@@ -9,9 +9,9 @@
 #include <age/vehicle/carSSTurbo.h>
 #include <veh_base/damage.h>
 #include <age/physics/archetype.h>
-#include <age/memory/memory.h>
+#include <memory/memory.h>
 #include <age/physics/bound.h>
-#include <age/core/output.h>
+#include <core/output.h>
 #include <age/physics/archmgr.h>
 #include <age/physics/phlevel.h>
 

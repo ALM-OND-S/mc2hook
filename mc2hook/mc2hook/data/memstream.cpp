@@ -1,6 +1,6 @@
 #include "memstream.h"
-#include <age/data/replay.h> //
-#include <age/core/output.h> //
+#include <mcgame/replay.h> //
+#include <core/output.h> //
 
 uint32_t datMemStream::GetCh(int stream)
 {

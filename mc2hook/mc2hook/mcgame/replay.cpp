@@ -1,5 +1,5 @@
 #include "replay.h"
-#include <age/core/output.h> //
+#include <core/output.h> //
 
 declfield(datReplay::sm_FrameSize)(0x860670);
 declfield(datReplay::sm_ReplayFile)(0x86066C);

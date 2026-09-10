@@ -5,7 +5,7 @@
 #include <age/physics/bound.h>
 #include <age/physics/archetype.h>
 
-#include <age/core/output.h> //
+#include <core/output.h> //
 
 declfield(phLevel::Instance)(0x6C8EB8);
 

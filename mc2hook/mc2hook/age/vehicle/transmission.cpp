@@ -1,8 +1,8 @@
 #include <mc2hook\mc2hook.h>
-#include <age/data/timemgr.h>
+#include <data/timemgr.h>
 #include "transmission.h"
 
-#include <age/input/keyboard.h> //
+#include <input/keyboard.h> //
 #include <dinput.h> //
 
 void vehTransmission::Update()

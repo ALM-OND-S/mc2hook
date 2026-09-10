@@ -1,7 +1,7 @@
 #pragma once
 #include "stack.h"
 #include <DbgHelp.h>
-#include <age\core\output.h>
+#include <core\output.h>
 
 /*
     datStack

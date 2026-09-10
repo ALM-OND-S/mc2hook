@@ -1,7 +1,7 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
 #include <age\string\unicode.h>
-#include <age\memory\age_alloc_baseclass.h>
+#include <memory\age_alloc_baseclass.h>
 #include <age/string/string.h>
 #include "fonttexture.h"
 

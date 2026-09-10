@@ -2,8 +2,8 @@
 #include <mccar/carsim.h>
 #include <age/physics/phcollider.h>
 #include <age/physics/phinertia.h>
-#include <age/math/math.h>
-#include <age/data/timemgr.h>
+#include <math/math.h>
+#include <data/timemgr.h>
 #include <age/vehicle/vehinput.h>
 
 void vehAero::Update()

@@ -1,6 +1,6 @@
-#include "rstate.h"
+#include "state.h"
 #include <mc2hook\mc2hook.h>
-#include <age/vector/matrix44.h>
+#include <vector/matrix44.h>
 
 declfield(gfxState::sm_Camera) = 0x858548;
 declfield(gfxState::sm_View) = 0x858440;

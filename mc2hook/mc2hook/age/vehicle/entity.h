@@ -2,7 +2,7 @@
 #include <mc2hook/mc2hook.h>
 #include <age/vehicle/car.h>
 #include <age/physics/phinst.h>
-#include <age/memory/age_alloc_baseclass.h>
+#include <memory/age_alloc_baseclass.h>
 
 class vehEntity : public AGEAllocatedClass
 {

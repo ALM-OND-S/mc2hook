@@ -1,8 +1,8 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
-#include <age\text\hashtable.h>
-#include <age\text\stringdata.h>
-#include <age\memory\memory.h>
+#include <text\hashtable.h>
+#include <text\stringdata.h>
+#include <memory\memory.h>
 #include "language.h"
 
 class txtStringTable

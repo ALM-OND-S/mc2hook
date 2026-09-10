@@ -1,8 +1,8 @@
 #include "gamestate.h"
-#include <age/core/output.h>
+#include <core/output.h>
 #include <discord-rpc/discord_rpc.h>
 #include <age/types.h>
-#include <age/data/timemgr.h>
+#include <data/timemgr.h>
 
 declfield(mcGameState::Instance)(0x6C3890);
 

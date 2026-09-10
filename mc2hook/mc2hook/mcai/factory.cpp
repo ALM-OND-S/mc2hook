@@ -1,5 +1,5 @@
 #include "factory.h"
-#include <age/memory/memory.h>
+#include <memory/memory.h>
 #include <age/vehicle/entity.h>
 #include <mccar/carsim.h>
 //#include <age/vehicle/aero.h>
@@ -8,16 +8,16 @@
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/aiinfo.h>
-#include <age/data/parse.h>
+#include <parse/parse.h>
 #include <age/physics/archetype.h>
 //#include <age/vehicle/vehinput.h>
 #include <age/vehicle/carmodel.h>
-#include <age/data/args.h>
+#include <data/args.h>
 #include <age/physics/phcollider.h>
 #include <age/physics/ph_some_inst_parent.h>
 #include <age/vehicle/gyro.h>
 
-#include <age/core/output.h> //
+#include <core/output.h> //
 
 void aiOpponentFactory::MakeEntity()
 {

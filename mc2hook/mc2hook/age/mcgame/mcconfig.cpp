@@ -1,5 +1,5 @@
 #include "mcconfig.h"
-#include <age/core/output.h>
+#include <core/output.h>
 #include <age/types.h>
 #include <age/globals.h>
 

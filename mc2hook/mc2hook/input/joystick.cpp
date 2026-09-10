@@ -1,5 +1,5 @@
 #include "joystick.h"
-#include <age/gfx/pipeline.h>
+#include <gfx/pipeline.h>
 
 declfield(ioJoystick::MaybeActiveJoystick)(0x6627D0);
 declfield(ioJoystick::sm_Sticks)(0x85FC00);

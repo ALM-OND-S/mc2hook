@@ -1,8 +1,8 @@
 #include "mcreplay.h"
 #include <mc2hook\mc2hook.h>
-#include <age/core/output.h> //
+#include <core/output.h> //
 #include <age/mcgame/raceconfig.h>
-#include <age/data/replay.h>
+#include <mcgame/replay.h>
 #include <age/mcgame/playermgr.h>
 #include <age/mcgame/player.h>
 #include <age/vehicle/entity.h>

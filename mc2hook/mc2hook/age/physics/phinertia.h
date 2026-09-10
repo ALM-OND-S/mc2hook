@@ -1,7 +1,7 @@
 #pragma once
 #include <mc2hook/mc2hook.h>
-#include <age/memory/age_alloc_baseclass.h>
-#include <age/vector/matrix34.h>
+#include <memory/age_alloc_baseclass.h>
+#include <vector/matrix34.h>
 
 class phInertialCS : public AGEAllocatedClass
 {

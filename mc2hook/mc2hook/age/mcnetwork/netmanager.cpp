@@ -2,7 +2,7 @@
 #include "age/state/gamestate.h"
 #include "age/types.h"
 #include "discord-rpc/discord_rpc.h"
-#include <age/core/output.h>
+#include <core/output.h>
 #include <age/string/string.h>
 
 declfield(mcNetManager::Instance)(0x6C38B4);

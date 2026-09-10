@@ -1,6 +1,6 @@
 #include "ghost.h"
 #include <mc2hook/mc2hook.h>
-#include <age/memory/memory.h>
+#include <memory/memory.h>
 //#include <age/mcgame/factory.h>
 #include <age/vehicle/entity.h>
 #include <mccar/carsim.h>
@@ -8,12 +8,12 @@
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/aiinfo.h>
-#include <age/data/parse.h>
+#include <parse/parse.h>
 #include <age/physics/archetype.h>
-#include <age/data/args.h>
+#include <data/args.h>
 #include <age/physics/phcollider.h>
 
-#include <age/core/output.h> //
+#include <core/output.h> //
 
 bool mcGhostCar::Spawn(const char* carName)
 {

@@ -1,8 +1,8 @@
 #include "gyro.h"
 #include <age/vehicle/wheel.h>
 #include <mccar/carsim.h>
-#include <age/data/timemgr.h>
-#include <age/math/math.h>
+#include <data/timemgr.h>
+#include <math/math.h>
 #include <age/vehicle/vehinput.h>
 #include <age/physics/archetype.h>
 #include <age/physics/phcollider.h>
@@ -13,7 +13,7 @@
 #include <age/types.h>
 
 #include "dinput.h"
-#include <age/core/output.h>
+#include <core/output.h>
 
 declfield(vehGyro::dword_6957C0)(0x6957C0);
 

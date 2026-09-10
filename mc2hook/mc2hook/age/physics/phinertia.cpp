@@ -1,8 +1,8 @@
 #include <mc2hook\mc2hook.h>
 #include "phinertia.h"
-#include <age/data/timemgr.h>
+#include <data/timemgr.h>
 
-#include <age/core/output.h> //
+#include <core/output.h> //
 
 void phInertialCS::ApplyContactForce(Vector3* someForce, Vector3* somePos, Matrix34* a4, Vector3* a5)
 {

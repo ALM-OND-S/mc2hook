@@ -1,7 +1,7 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
-#include <age\memory\age_alloc_baseclass.h>
-#include <age/core/file.h>
+#include <memory\age_alloc_baseclass.h>
+#include <core/file.h>
 
 struct zipEntry
 {

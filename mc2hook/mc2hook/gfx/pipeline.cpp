@@ -5,8 +5,8 @@
 #include <initguid.h>
 #include <hidclass.h>
 
-#include <age/input/joystick.h>
-#include <age/data/args.h>
+#include <input/joystick.h>
+#include <data/args.h>
 
 declfield(gfxPipeline::m_iWidth) = 0x674FAC;         // int
 declfield(gfxPipeline::m_iHeight) = 0x674FB0;        // int

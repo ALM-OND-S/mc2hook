@@ -1,8 +1,8 @@
 #include "playercamera.h"
 #include <age/age.h>
-#include <age/data/timemgr.h>
-#include <age/math/math.h>
-#include <age/core/output.h>
+#include <data/timemgr.h>
+#include <math/math.h>
+#include <core/output.h>
 #include <age/physics/phinertia.h>
 #include <age/physics/phcollider.h>
 #include <age/vehicle/carSSTurbo.h>
@@ -13,7 +13,7 @@
 #include <age/mcnetwork/netmanager.h>
 #include <mccar/carsim.h>
 
-#include <age/input/keyboard.h>
+#include <input/keyboard.h>
 #include <dinput.h>
 
 

@@ -1,4 +1,4 @@
-#include <age/math/math.h>
+#include <math/math.h>
 #include <math.h> // cos?
 #include <stdlib.h> // for frand
 

@@ -1,6 +1,6 @@
 #pragma once
-#include <age/input/input.h>
-#include <age/memory/age_alloc_baseclass.h>
+#include <input/input.h>
+#include <memory/age_alloc_baseclass.h>
 
 class vehEntity;
 class mcCarSim;

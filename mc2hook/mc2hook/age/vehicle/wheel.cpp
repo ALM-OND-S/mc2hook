@@ -1,7 +1,7 @@
 ﻿#include "wheel.h"
 #include <mc2hook\mc2hook.h>
-#include <age/data/timemgr.h>
-#include <age/math/math.h>
+#include <data/timemgr.h>
+#include <math/math.h>
 #include <mccar/carsim.h>
 #include <age/vehicle/transmission.h>
 #include <age/physics/phcollider.h>
@@ -10,8 +10,8 @@
 #include <age/physics/intersection.h>
 #include <age/physics/simulator.h>
 
-#include <age/core/output.h> //
-#include <age/input/keyboard.h> //
+#include <core/output.h> //
+#include <input/keyboard.h> //
 #include <dinput.h> //
 
 declfield(vehWheel::byte_6C5210)(0x6C5210);

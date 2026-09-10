@@ -1,6 +1,6 @@
 #include "device.h"
 #include <mc2hook\mc2hook.h>
-#include <age/input/input.h>
+#include <input/input.h>
 
 declfield(ioDeviceWrapper::g_InputMap)(0x695988);
 

@@ -1,7 +1,7 @@
 #pragma once
 #include <mc2hook\mc2hook.h>
-#include <age/vector/matrix44.h>
-#include <age/vector/matrix34.h>
+#include <vector/matrix44.h>
+#include <vector/matrix34.h>
 #include <d3d9.h>
 
 enum class gfxCullMode

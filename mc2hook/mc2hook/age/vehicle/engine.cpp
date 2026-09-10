@@ -1,8 +1,8 @@
 #include "engine.h"
 
 #include <mc2hook\mc2hook.h>
-#include <age/data/timemgr.h>
-#include <age/math/math.h>
+#include <data/timemgr.h>
+#include <math/math.h>
 
 void vehEngine::Update()
 {

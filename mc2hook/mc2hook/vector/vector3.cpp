@@ -1,7 +1,7 @@
 #include "vector3.h"
 #include <print>
-#include <age/core/output.h>
-#include <age/vector/matrix34.h>
+#include <core/output.h>
+#include <vector/matrix34.h>
 
 Vector3::Vector3() {}
 Vector3::Vector3(float x, float y, float z) : X(x), Y(y), Z(z) {}

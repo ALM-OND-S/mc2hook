@@ -10,19 +10,19 @@
 #include <age/vehicle/carSSTurbo.h>
 #include <age/vehicle/nitro.h>
 #include <age/vehicle/transmission.h>
-#include <age/math/math.h>
-#include <age/data/replay.h>
-#include <age/data/timemgr.h>
+#include <math/math.h>
+#include <mcgame/replay.h>
+#include <data/timemgr.h>
 #include <age/mcaudio/mcaudiomgr.h>
-#include <age/input/joystick.h>
-#include <age/input/device.h>
+#include <input/joystick.h>
+#include <input/device.h>
 #include <age/physics/phcollider.h>
 #include <age/physics/phinertia.h>
-#include <age/vector/vector3.h>
-#include <age/vector/matrix34.h>
+#include <vector/vector3.h>
+#include <vector/matrix34.h>
 #include <mccar/carpickups.h>
 
-#include <age/core/output.h>
+#include <core/output.h>
 
 // Kinematic steering state
 static bool kinematicEnabled = false;

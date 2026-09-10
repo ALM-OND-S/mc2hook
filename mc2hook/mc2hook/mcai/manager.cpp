@@ -1,11 +1,11 @@
 #include "manager.h"
-#include <age/core/output.h>
+#include <core/output.h>
 #include <age/mcgame/racemgr.h>
 #include <age/mcgame/raceconfig.h>
 #include <age/mcgame/racebase.h>
 #include <mcai/opponent.h>
 #include <age/globals.h>
-#include <age/memory/memory.h>
+#include <memory/memory.h>
 
 #include <age/vehicle/entity.h> //
 #include <age/mcgame/factory.h> //
